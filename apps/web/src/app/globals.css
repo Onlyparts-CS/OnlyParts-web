@@ -1,0 +1,763 @@
+@import "tailwindcss";
+
+/* ============================================================
+   OnlyParts — THE PARTS INDEX
+   ------------------------------------------------------------
+   The world is a steel parts cabinet and the visible-edge card
+   file that sits on it. Buff stock, stamped impressions, a bin
+   coordinate on every drawer, a signal tab on the card you are
+   holding, and a halftone plate of the part glued to the front.
+
+   It is printed as a two-colour job: one black plate, one spot
+   plate. That single fact enforces the whole brief — you cannot
+   make a purple gradient, a glossy blob or an evenly-distributed
+   palette on a two-plate press.
+
+   ACCENT ROLES — these are not interchangeable:
+     spot       stock, action, presence.  The working accent.
+     turquoise  Make-on-Demand only.  The part that does not
+                exist yet.
+   They never carry equal weight in one region, which is what
+   keeps the page reading as near-monochrome.
+   Light ground only. There is no dark theme, by instruction.
+
+   The spot plate was red-oxide primer until the green mark; the
+   token is called `spot` rather than a colour name so the next
+   re-plate is values and nothing else. One rule survives the
+   change and matters more than the hue: the fill step and the
+   text step are different colours and are never swapped.
+   ============================================================ */
+@theme {
+  /* --- ink: warm neutral, not the old blue-grey --- */
+  --color-ink-50:  #F7F5F1;
+  --color-ink-100: #EFECE5;
+  --color-ink-200: #E2DDD3;
+  --color-ink-300: #CBC4B6;
+  --color-ink-400: #A39A88;   /* hairlines and dot screens only */
+  --color-ink-500: #6E6656;   /* smallest legible label — 5.2:1 on paper */
+  --color-ink-600: #57503F;
+  --color-ink-700: #423C2E;
+  --color-ink-800: #2E2921;
+  --color-ink-900: #1C1813;
+  --color-ink-950: #0F0D0A;
+
+  /* --- the spot plate.
+         Named `spot`, not for its colour, because the colour is the one
+         thing about it that has changed once and may change again. It
+         used to be red-oxide primer; it is now the solder-mask green of
+         the mark. The token is the *role* — the second plate on a
+         two-colour job — so a future re-plate is values only.
+
+         Sampled from the mark, and it is worth saying which file, because
+         the two brand assets do not agree. Counting every opaque pixel:
+           logo-full.png  modal green #5FAF42   (what this token used to be)
+           mark.png       modal green #44A53F, ink mean #48A345
+         dE76 between them is 7.2 — invisible alone, obvious side by side.
+         The mark wins because it is the asset that appears small, on a
+         favicon and an app icon, where the lighter wordmark green goes to
+         mush. #46A340 is the mark's ink, and a colour picker pointed at it
+         lands within a shade either way. Re-sample the mark, not the page,
+         if this is ever questioned again.
+
+         The split is the same discipline oxide had:
+           500  fill. 2.93:1 on paper, so NEVER text and NEVER a border.
+           600  borders, focus rings, the halftone plate. 4.10:1 clears
+                the 3:1 that WCAG 1.4.11 asks of non-text UI.
+           700  text and any fill carrying reversed type. 6.15:1.
+         The darker mark green bought 600 a little headroom (3.95 → 4.10)
+         and cost 500 nothing it was allowed to do anyway. --- */
+  --color-spot-50:  #F2F9F2;
+  --color-spot-100: #E1F0E0;
+  --color-spot-200: #C0E0BE;
+  --color-spot-300: #99CC96;
+  --color-spot-400: #71B86C;
+  --color-spot-500: #46A340;   /* FILL ONLY — 2.93:1. Dark type on it: 6.07:1 */
+  --color-spot-600: #3B8736;   /* rules, focus, plate — 4.10:1 */
+  --color-spot-700: #2F682A;   /* TEXT, and fill under reversed type — 6.15:1 */
+  --color-spot-800: #265121;
+  --color-spot-900: #20401B;
+  --color-spot-950: #152410;
+
+  /* --- turquoise: Make-on-Demand only. The part that does not exist yet.
+         Kept through the re-plate because it measures dE 51.3 from the new
+         spot green — still unmistakably a different answer, which is the
+         entire job of this colour. `/make` and `/make/rfq` are real routes;
+         `.btn-make`, `.tab-make` and `.stamp-make` are waiting for them. --- */
+  --color-tq-50:  #EAFCFA;
+  --color-tq-100: #C9F7F2;
+  --color-tq-200: #98EFE7;
+  --color-tq-300: #63E7DB;
+  --color-tq-400: #40E0D0;   /* fill only */
+  --color-tq-500: #21C4B4;
+  --color-tq-600: #12A096;
+  --color-tq-700: #107F78;   /* turquoise TEXT */
+  --color-tq-800: #126561;
+  --color-tq-900: #135350;
+  --color-tq-950: #04302F;
+
+  /* --- surfaces --- */
+  --color-bg:          #F7F5F1;   /* paper */
+  --color-surface:     #FFFFFF;   /* card stock */
+  --color-sunken:      #EFECE5;
+  --color-tint:        #F2F9F2;   /* tracks --spot-50; re-plate this with it */
+
+  --color-line:        #E2DDD3;
+  --color-line-strong: #CBC4B6;
+
+  --color-heading:     #1C1813;
+  --color-body:        #2E2921;
+  --color-muted:       #423C2E;
+  --color-faint:       #57503F;
+  --color-disabled:    #6E6656;
+
+  /*
+    Two tokens, not one, and this is the request that keeps arriving: "make
+    the primary colour AND the text #46A340". The fill can be; the text
+    cannot. #46A340 measures 2.93:1 on paper — under the 4.5:1 WCAG AA wants
+    for body copy, and under even the 3:1 allowed for large text. Reading it
+    as a link colour is a genuine accessibility failure, not a preference.
+    So `accent` is the brand green and `accent-text` is the same hue taken
+    down to where it can be read. They are never swapped.
+  */
+  --color-accent:      #46A340;
+  --color-accent-text: #2F682A;
+  /*
+    Reversed type. It sits on --spot-700, not 500 — paper on 500 is
+    2.54:1 and on 600 only 4.01:1, so the button fill moved a step down
+    rather than the type going dark. A faint green cast rather than the
+    old warm white, because a warm white on a green plate reads dirty.
+  */
+  --color-on-accent:   #F2F7F0;
+
+  /* --- status.
+         Success moved off #2F6B41: against the new accent it measured
+         dE 15.7, close enough that a green link and a green success
+         message read as one thing. Pushed toward teal at dE 33, which is
+         a different colour at a glance while still saying "fine".
+
+         Sale keeps the old oxide, so that when a sale badge is finally
+         built it is unmistakable against a green catalogue rather than
+         vanishing into it. Nothing renders it yet — `--color-sale` and
+         `--shadow-ring` below are both declared and unused, which is why
+         Tailwind drops them from the build. They are kept because they
+         are correct, not because they are live. --- */
+  --color-success: #1E6B5E;  --color-success-bg: #E8F2F0;
+  --color-warning: #7A5510;  --color-warning-bg: #F7F0E1;
+  --color-danger:  #9B1C2E;  --color-danger-bg:  #F8EBEC;
+  --color-info:    #2C4A7C;  --color-info-bg:    #EAEEF5;
+  --color-sale:    #8B2B11;  --color-sale-bg:    #FDF2ED;
+
+  /* --- type: one grotesque at many widths and sizes, one squared
+         mono for data. Type lives at the extremes; the middle is
+         used sparingly and on purpose. --- */
+  --font-display: var(--font-archivo), "Arial Narrow", ui-sans-serif, sans-serif;
+  --font-sans:    var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    var(--font-azeret), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* --- radius: a card index has square corners. Zero across the
+         board, so every inherited `rounded-*` de-rounds at once. The
+         steps are kept as separate tokens only because Tailwind's
+         scale expects them; they are one decision, not five. --- */
+  --radius-xs: 0px; --radius-sm: 0px; --radius-md: 0px;
+  --radius-lg: 0px; --radius-xl: 0px;
+
+  /* --- elevation: a card lifts off a stack. Warm shadow, because a
+         neutral-grey shadow on warm paper reads as dirt. --- */
+  --shadow-e1: 0 1px 0 rgb(15 13 10 / .07), 0 1px 3px rgb(15 13 10 / .05);
+  --shadow-e2: 0 2px 0 rgb(15 13 10 / .06), 0 8px 18px -6px rgb(15 13 10 / .14);
+  --shadow-e3: 0 3px 0 rgb(15 13 10 / .05), 0 26px 50px -14px rgb(15 13 10 / .22);
+  /* 600, not 500: a focus ring is a non-text UI component and WCAG 1.4.11
+     wants 3:1 against the paper behind it. 500 measures 2.51. */
+  --shadow-ring: 0 0 0 1px var(--color-spot-600);
+
+  /* --- motion --- */
+  --ease-out:    cubic-bezier(.16, 1, .3, 1);
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+  /* No spring. An overshoot reads as playful, and everything here is
+     a measurement — a drawer slides to a stop, it does not bounce. */
+  --ease-snap:   cubic-bezier(.22, 1, .36, 1);
+  --ease-mech:   cubic-bezier(.83, 0, .17, 1);
+  /* the drawer: heavy start, long glide, dead stop */
+  --ease-drawer: cubic-bezier(.32, .72, 0, 1);
+}
+
+/* ============================================================
+   Base
+   ------------------------------------------------------------
+   Everything below is layered on purpose. Tailwind v4 puts its
+   utilities in `@layer utilities`, and unlayered author CSS
+   beats every layer regardless of specificity — so a bare
+   `button { font: inherit }` at the top level silently outranks
+   `text-[0.6875rem]` and `font-mono` on every button on the
+   site. It did, for a while: the nav tabs were rendering at
+   16px Archivo while their classes asked for 11px mono.
+
+   Element resets go in `base`, the design's own classes go in
+   `components`, and utilities win over both — which is the
+   order everything downstream already assumes.
+   ============================================================ */
+@layer base {
+
+:root {
+  color-scheme: light;
+  /* rail 30 + row 58 (+ tab index 40 on lg) */
+  --header-h: 88px;
+}
+@media (min-width: 1024px) { :root { --header-h: 128px; } }
+
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  background: var(--color-bg);
+  color: var(--color-body);
+  font-family: var(--font-sans);
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  /*
+    Note for whoever tries scroll-driven CSS animations here: this line makes
+    `body` a scroll container (`overflow-x: hidden` forces the other axis to
+    `auto`) while the page actually scrolls on `html`. `animation-timeline:
+    view()` binds to the nearest scroll container, finds this one, and never
+    advances — measured as `progress: null` on every element. Moving the guard
+    to `html` alone did not fix it either. Diagnose before assuming the
+    animation is at fault.
+  */
+  overflow-x: hidden;
+}
+
+/*
+  Display type is set wide, not condensed. A drawer label plate is
+  routed or stamped into a fixed-width slot, so the lettering spreads
+  to fill it — that is where the monumental register comes from.
+*/
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  color: var(--color-heading);
+  font-weight: 700;
+  font-stretch: 112%;
+  letter-spacing: -0.03em;
+  line-height: 0.98;
+  margin: 0;
+  text-wrap: balance;
+}
+
+/*
+  Type lives at the extremes here: plate lettering or an agate label, with
+  as little as possible in between. A section rule in a printed catalogue is
+  set in caps, so every h2 takes the plate register by default. h1 does not —
+  a product title is a name, and "M5 × 25MM HEX SOCKET HEAD CAP SCREW" is a
+  shout, not a heading.
+*/
+h2 {
+  text-transform: uppercase;
+  font-weight: 800;
+  font-stretch: 116%;
+  letter-spacing: -0.035em;
+  line-height: 0.9;
+}
+
+p { margin: 0; text-wrap: pretty; }
+ul { margin: 0; padding: 0; list-style: none; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+svg { display: block; }
+
+::selection { background: var(--color-spot-200); color: var(--color-ink-950); }
+
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 4px var(--color-spot-600);
+  border-radius: 0;
+}
+
+} /* @layer base */
+
+@layer components {
+
+/* ============================================================
+   Layout helpers
+   ============================================================ */
+.container-page {
+  max-width: 1560px;
+  margin-inline: auto;
+  padding-inline: 18px;
+}
+@media (min-width: 1024px) { .container-page { padding-inline: 36px; } }
+
+/*
+  The eyebrow is gone from headings everywhere. What survives is this:
+  a *field label* on a record, which is a different object — it names
+  the datum beside it rather than announcing the heading below it.
+*/
+.overline {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-disabled);
+}
+
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* the monumental register — display type at plate scale */
+.monumental {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-stretch: 118%;
+  letter-spacing: -0.045em;
+  line-height: 0.86;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   Vertical rhythm — three steps, and only three
+   ============================================================ */
+.page-shell   { padding-block: 2.5rem; }
+.section-gap  { margin-top: 3rem; }
+.stack > * + * { margin-top: 3rem; }
+
+@media (min-width: 1024px) {
+  .page-shell   { padding-block: 4rem; }
+  .section-gap  { margin-top: 5rem; }
+  .stack > * + * { margin-top: 5rem; }
+}
+
+/* ============================================================
+   Technical marginalia
+   ------------------------------------------------------------
+   Ruler ticks, bin coordinates and registration marks. These are
+   functional in this world: a bin coordinate is how you find the
+   drawer, a ruler edge is how you read the plate's scale.
+   ============================================================ */
+
+/* Millimetre rule — clean structural hairline scale marker. */
+/* The rule moved to `components/Rule.tsx` — an SVG tick scale.
+   As CSS it was two stacked repeating-linear-gradients, which reads (to a
+   person and to the detector) as the decorative hairline grid every generated
+   interface puts behind everything. Drawn as an SVG it is unambiguously a
+   measurement graphic and the 8px pitch stays true at any width. */
+
+/* the bin coordinate — A-14 / ROW 3 / 0412 */
+.bin {
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--color-disabled);
+  font-variant-numeric: tabular-nums;
+}
+
+/* paper. Uncoated stock is never flat — a fibre tooth at 3% keeps
+   large empty regions from reading as a blank div. */
+.paper {
+  background-color: var(--color-bg);
+  background-image:
+    radial-gradient(circle at 1px 1px, rgb(15 13 10 / .035) 1px, transparent 0),
+    radial-gradient(circle at 3px 5px, rgb(15 13 10 / .022) 1px, transparent 0);
+  background-size: 7px 7px, 11px 11px;
+}
+
+/*
+  The rack — a ruled sheet, not a tray of tiles.
+
+  A console is a form, and a form is ruled. Detached bordered cards in a
+  grid draw every cell twice and leave a gutter of nothing between them;
+  a rack draws each line once by letting the container's colour show
+  through a 1px gap. Children need no border and no radius of their own.
+
+  Children must set their own background — `bg-surface` in a panel grid,
+  or `bg-sunken` for a header row. Anything transparent shows the rule
+  colour and reads as a filled cell. For the same reason a ragged last row
+  is visible: five children in three columns leaves two cells of solid
+  rule colour. Either fill the row or set the column count to divide it.
+
+  Set the columns on the element: `class="rack sm:grid-cols-4"`.
+*/
+.rack {
+  display: grid;
+  gap: 1px;
+  background: var(--color-line);
+  border: 1px solid var(--color-line);
+}
+
+/* ============================================================
+   The card index
+   ============================================================ */
+
+/*
+  A visible-edge card. The top edge is darker because in a real file
+  that is the only part of the card you can see until you lift it —
+  it takes the light and the finger grease. One inset line, no radius.
+*/
+.card-index {
+  position: relative;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  box-shadow: var(--shadow-e1);
+  transition:
+    box-shadow 260ms var(--ease-out),
+    transform 260ms var(--ease-out),
+    border-color 200ms var(--ease-out);
+}
+.card-index::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: var(--color-ink-200);
+}
+.card-index:hover {
+  border-color: var(--color-ink-400);
+  box-shadow: var(--shadow-e2);
+  transform: translateY(-3px);
+}
+
+/*
+  The signal tab. In a card file you clip a coloured tab to the edge
+  of the card you need next; it is the one piece of colour in the
+  drawer and it means "this one". Oxide by default, turquoise for a
+  Make record.
+*/
+.tab {
+  position: absolute;
+  top: 0;
+  right: 14px;
+  width: 20px;
+  height: 26px;
+  background: var(--color-spot-500);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 74%, 0 100%);
+  pointer-events: none;
+}
+.tab-make { background: var(--color-tq-400); }
+.tab-sm { width: 13px; height: 17px; right: 9px; }
+
+/* struck through — the record is still filed, the stock is not there */
+.struck {
+  position: relative;
+  color: var(--color-disabled);
+}
+.struck::after {
+  content: "";
+  position: absolute;
+  left: -2px; right: -2px; top: 50%;
+  border-top: 1px solid currentColor;
+}
+
+/*
+  A rubber stamp. Slightly rotated, ink slightly starved at the edge.
+  This carries every binary state on the site — in stock, paid, made
+  to order — so a status never needs a coloured pill.
+*/
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border: 1.5px solid currentColor;
+  color: var(--color-spot-700);
+  opacity: .88;
+  transform: rotate(-1.4deg);
+}
+.stamp-out    { color: var(--color-ink-500); opacity: .7; }
+.stamp-make   { color: var(--color-tq-800); }
+.stamp-danger { color: var(--color-danger); }
+/*
+  Set square, for tables. One stamp at -1.4° reads as a stamp; forty of them
+  down a column read as a crooked table. The mark is the same — outline, mono,
+  wide caps — and it is what the admin console uses instead of a filled pill,
+  which is the thing every generated dashboard reaches for first.
+*/
+.stamp-flat { transform: none; opacity: 1; }
+
+/*
+  A folder tab. The category navigation is the row of tabs standing up out
+  of the drawer, so it is cut as one — splayed sides, flat top, sitting on
+  the rule rather than floating above it.
+*/
+.filetab {
+  clip-path: polygon(0 100%, 7px 0, calc(100% - 7px) 0, 100% 100%);
+}
+
+/* die-cut corner — a routed label plate, a cut sticker, a chamfer */
+.notch {
+  --notch: 8px;
+  clip-path: polygon(0 0, calc(100% - var(--notch)) 0, 100% var(--notch), 100% 100%, 0 100%);
+}
+.notch-bl {
+  --notch: 8px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, var(--notch) 100%, 0 calc(100% - var(--notch)));
+}
+
+/* the accent as a hairline divider, not a fill */
+.tick {
+  width: 1px;
+  align-self: stretch;
+  background: linear-gradient(to bottom, transparent, var(--color-ink-300) 25%, var(--color-ink-300) 75%, transparent);
+}
+
+/* ============================================================
+   Controls
+   ============================================================ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 42px; padding-inline: 18px;
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-weight: 600; font-size: 0.75rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  white-space: nowrap;
+  transition: background 150ms var(--ease-out), color 150ms var(--ease-out),
+              border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out),
+              transform 150ms var(--ease-out);
+}
+
+/*
+  Reversed out of the spot plate.
+
+  The fill is 700, where oxide's was 600. Green is a lighter ink, so paper-white
+  type on 600 comes to 4.01:1 and misses AA by half a point; on 700 it is
+  6.32:1. The button got darker rather than the type getting dark, because a
+  black-on-green button reads as a disabled one.
+*/
+.btn-primary { background: var(--color-spot-700); color: var(--color-on-accent); }
+.btn-primary:hover  { background: var(--color-spot-800); box-shadow: 0 3px 0 var(--color-spot-950); transform: translateY(-2px); }
+.btn-primary:active { background: var(--color-spot-900); box-shadow: none; transform: translateY(0); }
+
+.btn-secondary {
+  border: 1px solid var(--color-ink-900);
+  color: var(--color-ink-900);
+  background: transparent;
+}
+.btn-secondary:hover  { background: var(--color-ink-900); color: var(--color-bg); }
+.btn-secondary:active { background: var(--color-ink-950); }
+
+/* the Make path is the only place turquoise acts as a control */
+.btn-make { background: var(--color-tq-400); color: var(--color-tq-950); }
+.btn-make:hover  { background: var(--color-tq-300); box-shadow: 0 3px 0 var(--color-tq-700); transform: translateY(-2px); }
+.btn-make:active { background: var(--color-tq-500); box-shadow: none; transform: translateY(0); }
+
+.btn-ghost { color: var(--color-muted); }
+.btn-ghost:hover { background: var(--color-sunken); color: var(--color-heading); }
+
+.btn-lg { height: 52px; padding-inline: 26px; font-size: 0.8125rem; }
+.btn-sm { height: 32px; padding-inline: 12px; font-size: 0.6875rem; }
+
+.kbd {
+  font-family: var(--font-mono); font-size: 0.625rem; font-weight: 500;
+  padding: 2px 5px;
+  background: var(--color-sunken); border: 1px solid var(--color-line-strong);
+  color: var(--color-faint); line-height: 1.3;
+}
+
+/* a filed chip is square and thin — a tab divider, not a pill */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  padding: 5px 10px;
+  background: var(--color-surface); border: 1px solid var(--color-line-strong);
+  color: var(--color-muted);
+  transition: all 150ms var(--ease-out);
+}
+.chip:hover { border-color: var(--color-spot-600); color: var(--color-spot-700); background: var(--color-spot-50); }
+.chip[aria-pressed="true"], .chip.is-on {
+  background: var(--color-ink-900); border-color: var(--color-ink-900); color: var(--color-bg);
+}
+
+.token-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 0.6875rem; font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  /* 700, for the same reason .btn-primary is: this carries reversed type. */
+  background: var(--color-spot-700); color: var(--color-on-accent);
+  opacity: 0; transform: scale(.7);
+  transition: opacity 240ms var(--ease-snap), transform 240ms var(--ease-snap);
+}
+.token-chip.in { opacity: 1; transform: none; }
+
+/* ============================================================
+   Motion
+   ------------------------------------------------------------
+   One authored moment per surface, not scattered hover effects.
+   The cabinet's native motion is a drawer sliding out and a card
+   being lifted; everything below is one of those two.
+   ============================================================ */
+/*
+  Scroll reveal.
+
+  Hidden only under `[data-reveal-ready]`, an attribute `components/Reveal.tsx`
+  sets on <html> once it is actually running and motion is allowed. Without
+  JavaScript, in an old browser, or under prefers-reduced-motion, none of these
+  rules match and every element is simply visible — the failure mode of a
+  reveal effect must never be a blank page.
+
+  The drawer's own motion: a short rise and a settle, not a float. `--ease-drawer`
+  is front-loaded so the card arrives quickly and stops precisely, the way a
+  drawer on a good runner does.
+*/
+/*
+  The transition lives on `.in`, not on `.reveal`, and that is not a style
+  choice.
+
+  `data-reveal-ready` is set from an effect, so it lands *after* first paint:
+  every element is briefly visible, then becomes hidden. With the transition
+  declared on the base rule, that second step is animated — sixty tiles spend
+  620ms fading **out** before they can fade in. Measured at opacity 0.097 on a
+  tile 4000px down the page, which is the same defect the first recorded
+  attempt had, arrived at from the other direction.
+
+  Declaring the transition only on `.in` makes going hidden instantaneous and
+  going visible animated, which is the only combination that is ever wanted.
+*/
+[data-reveal-ready] .reveal {
+  opacity: 0;
+  transform: translateY(30px);
+}
+[data-reveal-ready] .reveal.in {
+  opacity: 1;
+  transform: none;
+  transition: opacity 620ms var(--ease-out), transform 620ms var(--ease-drawer);
+  /* Stagger, capped: the ninth tile in a row waits the same as the hundredth.
+     Below ~90ms apart the eye reads the row as one block rather than a sequence. */
+  transition-delay: calc(min(var(--i, 0), 8) * 90ms);
+}
+
+/*
+  Product grids DO reveal on scroll, as of 2026-08-06. Two earlier attempts
+  failed and are kept here because the reason the third worked is that one of
+  their shared causes had been removed in the meantime.
+
+  1. **IntersectionObserver adding a hidden class.** Wrong by construction: the
+     tile has already painted *visible*, so a class carrying `opacity: 0` plus a
+     transition animates it **out**. Measured — every below-fold tile stayed at
+     `opacity: 1` and would have faded away under the reader.
+  2. **`animation-timeline: view()`.** Correct in principle and supported by the
+     browser, but the timeline never advanced: `progress: null` on all sixty
+     tiles, each with a live `ViewTimeline`.
+
+  What actually landed: the existing `Reveal` component, unchanged, wrapping
+  each tile. It was always the right tool — but until the `[data-reveal-ready]`
+  gate above was added (the selector was a bare `.reveal` and hid content
+  unconditionally), reusing it would have inherited that bug at sixty times the
+  scale.
+
+  Measured in Chromium, desktop and phone, and kept as a test —
+  `e2e/reveal.spec.ts`, `npm run test:e2e`. Re-run it before touching this.
+
+  Measuring it found two defects that reading could not:
+
+  1. Below-fold tiles read 0.097, not 0 — they were painting visible and then
+     animating *out*, because the transition sat on `.reveal` and the gate
+     arrives after first paint. The transition moved to `.reveal.in`.
+  2. Above-fold tiles then read 0.895 — a visible flash. `Reveal` was calling
+     `getBoundingClientRect()` between arming and adding `.in`, forcing a style
+     recalculation that let the browser transition up from 0. The rect is now
+     read first. See `components/Reveal.tsx`.
+*/
+
+@keyframes rise     { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+@keyframes fadeIn   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes panelIn  { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+@keyframes blink    { 50% { opacity: 0; } }
+@keyframes slideX   { to { transform: translateX(-50%); } }
+@keyframes spin     { to { transform: rotate(360deg); } }
+@keyframes tokenPop { from { opacity: 0; transform: scale(.72); } to { opacity: 1; transform: none; } }
+@keyframes draw     { to { stroke-dashoffset: 0; } }
+
+.rise { opacity: 0; animation: rise 700ms var(--ease-drawer) forwards; }
+.token-pop { animation: tokenPop 260ms var(--ease-snap) both; }
+.caret {
+  display: inline-block; width: 8px; height: 1.05em;
+  /* A caret marks where typing lands, so it is a UI indicator at 3:1, not decoration. */
+  background: var(--color-spot-600); vertical-align: -2px;
+  animation: blink 1.05s steps(1) infinite;
+}
+
+.marquee { overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); }
+.marquee-track { display: flex; width: max-content; animation: slideX 90s linear infinite; }
+.marquee:hover .marquee-track, .marquee:focus-within .marquee-track { animation-play-state: paused; }
+
+.no-bar { scrollbar-width: none; }
+.no-bar::-webkit-scrollbar { display: none; }
+
+} /* @layer components */
+
+/* ============================================================
+   Print — docs/08-API-SPEC.md §invoice
+   ------------------------------------------------------------
+   A tax invoice is a legal document that someone files. Browsers
+   drop background fills by default, so anything the invoice needs
+   on paper asks for it explicitly.
+   ============================================================ */
+@page { size: A4; margin: 14mm 12mm; }
+
+@media print {
+  :root { --header-h: 0px; }
+
+  html, body { background: #fff !important; overflow: visible !important; }
+
+  .print-hide { display: none !important; }
+
+  .container-page { max-width: none !important; margin: 0 !important; padding-inline: 0 !important; }
+
+  .invoice-sheet {
+    max-width: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  .invoice-sheet, .invoice-sheet * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* 760px of table in ~700px of paper, inside an overflow-x container
+     that has no scrollbar once printed */
+  .invoice-scroll { overflow: visible !important; }
+  .invoice-sheet table {
+    min-width: 0 !important;
+    width: 100% !important;
+    table-layout: fixed;
+  }
+  .invoice-sheet thead { display: table-header-group; }
+  .invoice-sheet tfoot { display: table-footer-group; }
+  .invoice-sheet tr, .invoice-sheet .avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .invoice-sheet th, .invoice-sheet td {
+    padding-block: 6px !important;
+    padding-inline: 5px !important;
+    font-size: 8.5pt !important;
+  }
+  .invoice-sheet th:first-child, .invoice-sheet td:first-child { padding-left: 0 !important; }
+  .invoice-sheet th:last-child,  .invoice-sheet td:last-child  { padding-right: 0 !important; }
+  .invoice-sheet td span { font-size: inherit !important; }
+  .invoice-sheet .stamp { transform: none !important; }
+
+  /* URLs are noise on an invoice — the numbers are what matters */
+  .invoice-sheet a[href]::after { content: "" !important; }
+}
+
+/* ============================================================
+   Reduced motion — everything off, no information lost
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* `.reveal` is already inert here — `data-reveal-ready` is never set under
+     reduced motion — but `.rise` animates on load and does need switching off. */
+  .rise { opacity: 1 !important; transform: none !important; }
+  .token-chip { opacity: 1 !important; transform: none !important; }
+  .card-index:hover { transform: none !important; }
+}

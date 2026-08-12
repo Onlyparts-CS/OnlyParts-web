@@ -1,0 +1,19 @@
+
+# Playwright
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
+apps/web/.playwright/
+
+# deepsec scan workspace — ~900MB of node_modules plus per-file scan state.
+# Resumable and regenerable: `npx deepsec init --scaffold-only`.
+.deepsec/
+
+# Supplier feed dumps. Regenerate with tools/feeds/pull.mjs; the mapping in
+# tools/feeds/map.json is the part worth versioning, not its output.
+tools/feeds/out/
+
+# Vendored agent skills — 90MB, and skills-lock.json holds the source repo,
+# path and content hash for every one of them. The lockfile is the thing worth
+# versioning, not its expansion. `.agents/AGENTS.md` is hand-written and stays.
+.agents/skills/

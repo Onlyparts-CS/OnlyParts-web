@@ -1,0 +1,57 @@
+{
+  "_comment": [
+    "Every supplier the puller knows about.",
+    "",
+    "Adding a Shopify store is one entry here and no code — the whole platform",
+    "serves /products.json?limit=250&page=N with variants, SKUs, prices, grams",
+    "and images. A surprising share of Indian electronics and parts retailers",
+    "run on it, which is why this is a table rather than a switch statement.",
+    "",
+    "`prefix` namespaces the SKU. It must be unique and must never change once",
+    "a source has been imported: the importer keys updates on `sku`, so editing",
+    "a prefix turns every future run into a duplicate catalogue rather than an",
+    "update.",
+    "",
+    "To check whether a new site qualifies:",
+    "  curl -s 'https://HOST/products.json?limit=1' | head -c 200",
+    "A JSON object with a `products` array means it will work as-is."
+  ],
+
+  "onlyscrews": {
+    "kind": "shopify",
+    "host": "onlyscrews.in",
+    "prefix": "OS",
+    "note": "Fasteners, magnets, bearings. product_type is mostly empty, so mapping leans on titles."
+  },
+  "robocraze": {
+    "kind": "shopify",
+    "host": "robocraze.com",
+    "prefix": "RC",
+    "note": "Robotics and sensors. Real product_type values — maps far better than onlyscrews."
+  },
+  "quartzcomponents": {
+    "kind": "shopify",
+    "host": "quartzcomponents.com",
+    "prefix": "QC",
+    "note": "Electronic components and modules."
+  },
+  "thinkrobotics": {
+    "kind": "shopify",
+    "host": "thinkrobotics.com",
+    "prefix": "TR",
+    "note": "Embedded, 3D printing, robotics."
+  },
+  "rees52": {
+    "kind": "shopify",
+    "host": "rees52.com",
+    "prefix": "R5",
+    "note": "Displays, sensors, boards."
+  },
+
+  "robu": {
+    "kind": "robu",
+    "host": "robu.in",
+    "prefix": "RB",
+    "note": "~110k products. Cloudflare-fronted, so it goes through curl and one request per product page — hours, not minutes. Its own adapter because the data comes from JSON-LD, not an API."
+  }
+}

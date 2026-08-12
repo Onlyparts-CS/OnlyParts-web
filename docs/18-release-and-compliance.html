@@ -1,0 +1,574 @@
+<title>OnlyParts — Release &amp; Compliance Plan</title>
+
+<style>
+  :root {
+    --paper:      #FBFAF6;
+    --surface:    #FFFFFF;
+    --sunken:     #F2F1EA;
+    --ink:        #14180F;
+    --body:       #33372C;
+    --muted:      #6B7263;
+    --faint:      #969C8C;
+    --rule:       #DCDBD1;
+    --rule-hard:  #BFBEB2;
+    --spot:       #3E7A2B;
+    --spot-bright:#5FAF42;
+    --spot-wash:  #EFF6EB;
+    --crit:       #A32118;
+    --crit-wash:  #FBEEEC;
+    --warn:       #8A5A06;
+    --warn-wash:  #FBF3E4;
+
+    --mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
+    --sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #0E110A; --surface: #161A11; --sunken: #1C2116;
+      --ink: #ECEEE6; --body: #C4C9BA; --muted: #8D9481; --faint: #6A7160;
+      --rule: #2A3021; --rule-hard: #3C4431;
+      --spot: #8FD070; --spot-bright: #7BC95E; --spot-wash: #1A2413;
+      --crit: #F08A80; --crit-wash: #2A1512;
+      --warn: #E0B45F; --warn-wash: #261D0C;
+    }
+  }
+  :root[data-theme="light"] {
+    --paper: #FBFAF6; --surface: #FFFFFF; --sunken: #F2F1EA;
+    --ink: #14180F; --body: #33372C; --muted: #6B7263; --faint: #969C8C;
+    --rule: #DCDBD1; --rule-hard: #BFBEB2;
+    --spot: #3E7A2B; --spot-bright: #5FAF42; --spot-wash: #EFF6EB;
+    --crit: #A32118; --crit-wash: #FBEEEC;
+    --warn: #8A5A06; --warn-wash: #FBF3E4;
+  }
+  :root[data-theme="dark"] {
+    --paper: #0E110A; --surface: #161A11; --sunken: #1C2116;
+    --ink: #ECEEE6; --body: #C4C9BA; --muted: #8D9481; --faint: #6A7160;
+    --rule: #2A3021; --rule-hard: #3C4431;
+    --spot: #8FD070; --spot-bright: #7BC95E; --spot-wash: #1A2413;
+    --crit: #F08A80; --crit-wash: #2A1512;
+    --warn: #E0B45F; --warn-wash: #261D0C;
+  }
+
+  body {
+    background: var(--paper);
+    color: var(--body);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .sheet { max-width: 60rem; margin: 0 auto; padding: 3rem 1.25rem 6rem; }
+  @media (min-width: 60rem) { .sheet { padding-inline: 2.5rem; } }
+
+  /* ---------- masthead: a spec-sheet header block, not a hero ---------- */
+  .mast { border-top: 3px solid var(--ink); padding-top: 1rem; margin-bottom: 3.5rem; }
+  .mast h1 {
+    font-size: clamp(1.75rem, 4.2vw, 2.75rem);
+    line-height: 1.06; letter-spacing: -0.022em; font-weight: 700;
+    color: var(--ink); text-wrap: balance; margin: 0.35rem 0 0.75rem;
+  }
+  .mast p { max-width: 62ch; margin: 0; color: var(--muted); }
+  .docket {
+    display: grid; gap: 0 2rem; grid-template-columns: repeat(auto-fit, minmax(9rem, auto));
+    border-top: 1px solid var(--rule); margin-top: 1.75rem; padding-top: 0.85rem;
+  }
+  .docket div { display: flex; flex-direction: column; gap: 0.15rem; }
+
+  .label {
+    font-family: var(--mono); font-size: 0.6875rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.11em; color: var(--faint);
+  }
+  .docket b { font-family: var(--mono); font-size: 0.8125rem; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* ---------- sections ---------- */
+  section { margin-top: 3.25rem; }
+  section > h2 {
+    display: flex; align-items: baseline; gap: 0.85rem;
+    font-size: 1.3rem; font-weight: 700; letter-spacing: -0.012em; color: var(--ink);
+    border-bottom: 2px solid var(--ink); padding-bottom: 0.5rem; margin: 0 0 1.35rem;
+  }
+  section > h2 .n {
+    font-family: var(--mono); font-size: 0.75rem; font-weight: 700; color: var(--spot);
+    letter-spacing: 0.06em; flex: none;
+  }
+  h3 {
+    font-size: 1rem; font-weight: 700; color: var(--ink);
+    margin: 2rem 0 0.6rem; letter-spacing: -0.005em;
+  }
+  p, li { max-width: 68ch; }
+  p { margin: 0 0 0.9rem; }
+  ul, ol { margin: 0 0 1rem; padding-left: 1.15rem; }
+  li { margin-bottom: 0.4rem; }
+  strong { color: var(--ink); font-weight: 650; }
+  code {
+    font-family: var(--mono); font-size: 0.855em; background: var(--sunken);
+    padding: 0.1em 0.34em; border: 1px solid var(--rule); color: var(--ink);
+  }
+  a { color: var(--spot); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--spot-bright); outline-offset: 2px; }
+
+  /* ---------- tables: ruled like an inspection docket ---------- */
+  .scroll { overflow-x: auto; margin: 1rem 0 1.5rem; border: 1px solid var(--rule-hard); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.875rem; min-width: 34rem; }
+  th, td { text-align: left; padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead th {
+    background: var(--sunken); color: var(--ink);
+    font-family: var(--mono); font-size: 0.6875rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.09em; white-space: nowrap;
+    border-bottom: 1px solid var(--rule-hard);
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.num, th.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td:first-child { color: var(--ink); }
+
+  /* ---------- callouts ---------- */
+  .note { border-left: 3px solid var(--rule-hard); background: var(--surface); padding: 0.9rem 1.1rem; margin: 1.25rem 0; }
+  .note.crit { border-left-color: var(--crit); background: var(--crit-wash); }
+  .note.warn { border-left-color: var(--warn); background: var(--warn-wash); }
+  .note.spot { border-left-color: var(--spot-bright); background: var(--spot-wash); }
+  .note p:last-child, .note ul:last-child, .note ol:last-child { margin-bottom: 0; }
+  .note .label { display: block; margin-bottom: 0.3rem; }
+  .note.crit .label { color: var(--crit); }
+  .note.warn .label { color: var(--warn); }
+  .note.spot .label { color: var(--spot); }
+
+  .pill {
+    display: inline-block; font-family: var(--mono); font-size: 0.6875rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.07em; padding: 0.12rem 0.42rem;
+    border: 1px solid currentColor; white-space: nowrap;
+  }
+  .pill.block { color: var(--crit); }
+  .pill.soon  { color: var(--warn); }
+  .pill.ok    { color: var(--spot); }
+
+  .cost { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; }
+
+  footer { margin-top: 4rem; border-top: 1px solid var(--rule); padding-top: 1.25rem; font-size: 0.8125rem; color: var(--muted); }
+  footer ol { padding-left: 1.3rem; }
+  footer li { margin-bottom: 0.25rem; max-width: none; }
+</style>
+
+<div class="sheet">
+
+<header class="mast">
+  <span class="label">OnlyParts · Release Dossier</span>
+  <h1>Getting to a real launch: hosting, compliance, and what makes it legal to sell</h1>
+  <p>The storefront works. What stands between it and taking money from strangers in India is
+     mostly not code — it is three regulators, one tax registration, and a trademark that needs
+     filing before somebody else files it.</p>
+  <div class="docket">
+    <div><span class="label">Prepared</span><b>7 Aug 2026</b></div>
+    <div><span class="label">Stack</span><b>Next 16 · Payload 3 · PG</b></div>
+    <div><span class="label">Market</span><b>India</b></div>
+    <div><span class="label">Launch cost</span><b>≈ ₹5,000/mo</b></div>
+  </div>
+</header>
+
+<div class="note crit">
+  <span class="label">Read this first</span>
+  <p>I am not a lawyer or a chartered accountant, and some of what follows carries penalties in
+     crores. Every figure, code and deadline below was checked against current sources on the date
+     above and is cited at the end — but treat this as the brief you hand to a CA and an IP
+     attorney, not as advice you act on unreviewed. The engineering half you can act on directly.</p>
+</div>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="n">01</span> What actually blocks launch</h2>
+
+  <p>Four things. Two are code, two are paperwork, and none of them are the storefront —
+     which is finished enough to sell from.</p>
+
+  <div class="scroll">
+  <table>
+    <thead>
+      <tr><th>Blocker</th><th>Why it stops you</th><th>Effort</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Sign-in accepts any six digits</td>
+        <td>There is no identity behind an account. Order history, saved addresses and the DPDP
+            data-export are all gated on a check that always passes.</td>
+        <td class="num">2–3 days</td>
+        <td><span class="pill block">Blocker</span></td>
+      </tr>
+      <tr>
+        <td>No rate limiting anywhere</td>
+        <td>Order tracking takes an order number and a phone number and will answer as fast as you
+            can ask. That is a customer-data enumeration endpoint.</td>
+        <td class="num">1 day</td>
+        <td><span class="pill block">Blocker</span></td>
+      </tr>
+      <tr>
+        <td>No country of origin, MRP, net quantity or importer details</td>
+        <td>Mandatory listing declarations under Legal Metrology Rule 6(1). Since 1 July 2026
+            imported goods must also be <em>filterable</em> by origin.</td>
+        <td class="num">3–4 days</td>
+        <td><span class="pill block">Blocker</span></td>
+      </tr>
+      <tr>
+        <td>GST registration + a seller entity</td>
+        <td>You cannot raise a compliant invoice without a GSTIN, and the HSN column the importer
+            already demands exists precisely to print on it.</td>
+        <td class="num">2–3 weeks</td>
+        <td><span class="pill block">Blocker</span></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note spot">
+    <span class="label">Already done</span>
+    <p>Catalogue, cart, checkout, order pipeline, the admin console, the bulk importer with a real
+       dry run, and the supplier feed puller. The build-curation loop is wired end to end and
+       verified. None of this is on the critical path any more.</p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="n">02</span> Hosting — cheap first, and it scales</h2>
+
+  <p>One constraint decides the whole shape of this, and it is not price: <strong>CERT-In requires
+     180 days of logs held inside Indian jurisdiction.</strong> Combined with the RBI's rule that
+     payment data stays in India, that rules out the reflexive answer of a US-region PaaS and a
+     Frankfurt database. Pick an India region on day one and the compliance question never
+     reopens.</p>
+
+  <h3>Phase 0 — launch <span class="cost">≈ $55/mo · ₹4,800</span></h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Layer</th><th>Choice</th><th class="num">Cost/mo</th><th>Why this one</th></tr></thead>
+    <tbody>
+      <tr><td>Edge</td><td>Cloudflare Pro</td><td class="num">$20</td>
+          <td>WAF, DDoS absorption, bot rules and cache. The single highest-value line item here —
+              it is also most of your "cyber compliance" story.</td></tr>
+      <tr><td>App</td><td>DigitalOcean droplet, Bangalore (BLR1) — 2 vCPU / 4 GB</td><td class="num">$24</td>
+          <td>India region, so latency and log residency are both solved. Runs the Next standalone
+              build in Docker.</td></tr>
+      <tr><td>Database</td><td>DO Managed Postgres, BLR1</td><td class="num">$15</td>
+          <td>Backups and point-in-time recovery you do not have to operate. Same region as the app.</td></tr>
+      <tr><td>Images</td><td>Cloudflare R2</td><td class="num">~$1</td>
+          <td>Zero egress fees. For an image-heavy parts catalogue this is the difference between a
+              predictable bill and a surprise.</td></tr>
+      <tr><td>Payments</td><td>Razorpay or Cashfree</td><td class="num">2% + GST</td>
+          <td>Per transaction, not monthly. Keeps card data entirely off your infrastructure, which
+              is how you stay out of PCI-DSS scope.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>This comfortably serves <strong>20,000–40,000 page views a day</strong> with Cloudflare caching
+     the catalogue. That is well past where you will be at launch.</p>
+
+  <h3>Phase 1 — when traffic is real <span class="cost">≈ $150/mo · ₹13,000</span></h3>
+  <p>Triggered by sustained CPU above 60% or p95 response over 800 ms — not by a date. Add a second
+     app droplet behind a DO load balancer ($12), a managed Redis for sessions and rate-limit
+     counters ($15), and a Postgres read replica ($15). Nothing about the application changes;
+     this is the same architecture with more of it.</p>
+
+  <h3>Phase 2 — AWS Mumbai <span class="cost">≈ $400/mo · ₹35,000</span></h3>
+  <p>ECS Fargate, RDS Multi-AZ, Secrets Manager, CloudFront — the layout your own infra conventions
+     already describe. Move when you need multi-AZ failover or a compliance auditor asks for it,
+     and not before. Migrating early costs roughly eight times the bill to solve problems you do
+     not have.</p>
+
+  <div class="note warn">
+    <span class="label">This supersedes docs/10-INFRA-DEVOPS.md — here is why</span>
+    <p>That document proposes Vercel for the storefront and a Hostinger or Hetzner CX32 VPS for the
+       API, at roughly $35/mo. It is cheaper than the above and it was sound reasoning. Two things
+       have changed since:</p>
+    <ul>
+      <li><strong>It describes an architecture that was not built.</strong> It splits a NestJS API,
+          Meilisearch and Postgres onto their own VPS behind a separate Vercel storefront. What
+          actually exists is one Next.js + Payload application against one Postgres. Most of the
+          split, and its latency argument, no longer applies.</li>
+      <li><strong>Hetzner is in Europe.</strong> CERT-In requires 180 days of logs held inside
+          Indian jurisdiction, which an EU VPS cannot satisfy without a second log pipeline. India
+          to Falkenstein is also a 130–150 ms round trip on every uncached request.</li>
+    </ul>
+    <p>So the real trade is <strong>$35/mo with a compliance gap and EU latency, against $55/mo with
+       neither</strong>. At ₹1,700 a month of difference, the India region wins. Everything else in
+       that document — Cloudflare in front, R2 for media, Hostinger keeping the registrar and
+       pointing nameservers at Cloudflare — still stands and is assumed here.</p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="n">03</span> Cyber compliance</h2>
+
+  <p>Two regimes apply, and they are unusually specific about mechanics — which is good news,
+     because it means you can actually finish them rather than gesture at them.</p>
+
+  <h3>CERT-In Directions (in force since April 2022)</h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Requirement</th><th>What it means in practice</th></tr></thead>
+    <tbody>
+      <tr><td>Report incidents within <strong>6 hours</strong></td>
+          <td>The clock starts at <em>awareness</em>, not confirmation. GDPR gives 72 hours; this
+              gives six. You need a named person, a template, and CERT-In's contact details written
+              down before you need them.</td></tr>
+      <tr><td><strong>180 days</strong> of logs, stored in India</td>
+          <td>Application, access and system logs. This is the requirement that picks your hosting
+              region.</td></tr>
+      <tr><td>Clocks synced to NIC or NPL NTP</td>
+          <td>One line in the server config. Trivial, and specifically named in the directions.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Non-compliance runs to ₹1 lakh and up to a year's imprisonment. Small money, real teeth.</p>
+
+  <h3>DPDP Act &amp; Rules — the dates are now fixed</h3>
+  <div class="note">
+    <span class="label">Updates docs/16-DPDP-COMPLIANCE.md</span>
+    <p>That document is a good engineering treatment of the DPDP <em>Act</em>, and it predates the
+       <em>Rules</em>. Its controls, lawful bases and penalty table all still hold — what it could
+       not have is the compliance calendar below, which only became real in November 2025. Read
+       that one for the "what to build"; this section is the "by when".</p>
+  </div>
+  <p>The Rules were notified on <strong>14 November 2025</strong> with a phased runway. This is the
+     one piece of Indian tech regulation with a genuine deadline you can plan against:</p>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Date</th><th>What lands</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td class="num">Nov 2025</td><td>Data Protection Board established; its rules effective immediately</td><td><span class="pill ok">Done</span></td></tr>
+      <tr><td class="num">Nov 2026</td><td>Consent-manager obligations (Rule 4) take effect</td><td><span class="pill soon">3 months</span></td></tr>
+      <tr><td class="num">13 May 2027</td><td>Full compliance — every core Data Fiduciary obligation</td><td><span class="pill soon">21 months</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Penalties scale to <strong>₹250 crore</strong> for failing to maintain reasonable security
+     safeguards, ₹200 crore for not notifying a breach, ₹50 crore for anything else. You are a long
+     way from being a Significant Data Fiduciary, so the audit and DPIA obligations do not bite —
+     but consent, notice, breach notification and the right to erasure all do.</p>
+
+  <div class="note">
+    <span class="label">What the code already gets right</span>
+    <p>The account screen's export button is wired to a real server action gated on a signed cookie,
+       and deletion is deliberately absent with the reason written down: a GST invoice must be
+       retained six years, so orders can be anonymised but never deleted. That is the correct
+       reading. It needs finishing once sign-in is real — anonymise-in-place, not delete.</p>
+  </div>
+
+  <h3>Findings from the security pass</h3>
+  <p>Audited against the seven categories in the security-checklist skill, translated from its
+     Micronaut annotations to this stack's equivalents.</p>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Category</th><th>Finding</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td>Authorization</td><td>Every one of the 12 admin server actions re-checks the session
+          through <code>actionStaff()</code>. Role tables are data, so the nav and the guard cannot
+          disagree.</td><td><span class="pill ok">Pass</span></td></tr>
+      <tr><td>SQL injection</td><td>All access goes through Payload / Drizzle. No string-built SQL.</td><td><span class="pill ok">Pass</span></td></tr>
+      <tr><td>Mass assignment</td><td>The importer re-runs its own dry run server-side rather than
+          trusting the browser's diff, and writes as the signed-in user with
+          <code>overrideAccess: false</code>.</td><td><span class="pill ok">Pass</span></td></tr>
+      <tr><td>Authentication</td><td>Sign-in accepts any six digits. Everything customer-facing
+          inherits this.</td><td><span class="pill block">Fail</span></td></tr>
+      <tr><td>Rate limiting</td><td>None, anywhere. Order tracking is enumerable by order number
+          plus phone.</td><td><span class="pill block">Fail</span></td></tr>
+      <tr><td>Secrets</td><td>Env-based, nothing committed. Needs a real secret store at Phase 1.</td><td><span class="pill soon">Watch</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="n">04</span> What makes it legal to sell these particular things</h2>
+
+  <p>This is the section that gets skipped, and it is the one with the most exposure — because a
+     parts catalogue is not a generic e-commerce catalogue. Batteries, wireless transmitters and
+     electronics each carry their own regulator.</p>
+
+  <h3>Legal Metrology — already overdue</h3>
+  <div class="note crit">
+    <span class="label">In force since 1 July 2026</span>
+    <p>The Legal Metrology (Packaged Commodities) Amendment Rules 2026 insert sub-rule 10A: every
+       e-commerce entity selling <strong>imported</strong> products must offer a
+       <strong>searchable and sortable country-of-origin filter</strong>. Nearly everything in this
+       catalogue is imported. The schema has no origin field at all, so this is a data problem
+       before it is a UI problem — and the suppliers do not publish it, so it has to come off your
+       own import documents.</p>
+  </div>
+  <p>Rule 6(1) separately requires each listing to show: manufacturer/packer/importer name and
+     address, net quantity, MRP inclusive of all taxes, country of origin, date of manufacture, and
+     consumer-care contact details. Of those, the schema currently has none.</p>
+
+  <h3>Product-specific approvals</h3>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>If you sell…</th><th>You need</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Lithium cells and packs</td><td>BIS registration under CRS</td>
+          <td>IS 16046 Part 2 for cells, Part 1 for packs. <strong>Testing must be in an Indian
+              lab</strong> — foreign test reports are not accepted. Affects every drone, EV and
+              power drawer.</td></tr>
+      <tr><td>Batteries of any chemistry</td><td>EPR registration with CPCB</td>
+          <td>Under the Battery Waste Management Rules, before you put anything on the market.
+              Carries annual collection and recycling targets. 4–8 weeks.</td></tr>
+      <tr><td>Electronics generally</td><td>BIS CRS + E-Waste EPR</td>
+          <td>The CRS order is blunt: no manufacture, sale or distribution of covered electronics
+              without registration.</td></tr>
+      <tr><td>FPV video transmitters, RF modules</td><td>WPC / ETA approval</td>
+          <td>The genuinely risky drawer. Many common FPV VTX units transmit on bands that are not
+              licence-exempt in India at all.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note warn">
+    <span class="label">A strategic read, not a legal one</span>
+    <p>These approvals attach to whoever <em>puts goods on the market</em>. Buying stock and
+       reselling it makes that you. Operating as a marketplace where a registered seller ships to
+       the customer moves most of this burden onto them — and, separately, the marketplace model is
+       the only one of the two that permits foreign investment, which matters the day you raise.
+       Middleman-with-inventory is the model that inherits every one of these obligations. Worth
+       deciding deliberately rather than by default.</p>
+  </div>
+
+  <h3>Consumer Protection (E-Commerce) Rules 2020</h3>
+  <p>Cheap to satisfy and commonly missed: publish seller details, a clear returns and refunds
+     policy, and a named <strong>Grievance Officer</strong> with contact details who acknowledges
+     within 48 hours and resolves within one month. These are page-level content changes, not
+     engineering.</p>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="n">05</span> Trademark and entity</h2>
+
+  <p>File before launch, not after. Indian trademark rights follow use, but registration is what
+     makes them enforceable — and a marketplace competitor noticing your name after you have
+     spent on marketing is the expensive version of this.</p>
+
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Class</th><th>Covers</th><th>Priority</th></tr></thead>
+    <tbody>
+      <tr><td class="num">35</td><td>Retail and online marketplace services — bringing goods together for others to buy</td><td><strong>File first.</strong> This is the store itself.</td></tr>
+      <tr><td class="num">9</td><td>Electronics, boards, sensors, batteries</td><td>File if you ever brand your own parts</td></tr>
+      <tr><td class="num">7</td><td>Machines and machine parts — bearings, motors</td><td>Optional at launch</td></tr>
+      <tr><td class="num">6</td><td>Common metal hardware — fasteners, fittings</td><td>Optional at launch</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p><strong>Cost:</strong> ₹4,500 per class filing online as an individual, or as an entity with
+     Udyam/MSME registration or DPIIT startup recognition. ₹9,000 per class for a company or LLP
+     without it. <em>Get the Udyam registration first — it is free and it halves this.</em>
+     Attorney fees typically add ₹5,000–10,000 per class. Expect 12–24 months to registration; you
+     may use ™ from the day you file, ® only after it is granted.</p>
+
+  <div class="note crit">
+    <span class="label">Two real risks with this specific name</span>
+    <ol>
+      <li><strong>Descriptiveness.</strong> "OnlyParts" describes what the shop sells, and marks
+          that describe their own goods draw objections under Section 9 of the Trade Marks Act as
+          lacking distinctiveness. The stylised logo is far more defensible than the words —
+          <strong>file the device mark (logo + wordmark together), not the plain word</strong>.</li>
+      <li><strong>OnlyScrews.</strong> An existing Indian brand, same construction, adjacent goods,
+          and one of the two sites you are pulling catalogue data from. An examiner could
+          reasonably cite it. Pay for a proper search on the IP India register before you file, and
+          before you print anything.</li>
+    </ol>
+  </div>
+
+  <h3>Registrations to do in order</h3>
+  <ol>
+    <li><strong>Entity</strong> — Private Limited if you intend to raise; LLP or proprietorship if not.</li>
+    <li><strong>Udyam (MSME)</strong> — free, instant, and halves the trademark fee.</li>
+    <li><strong>GST registration</strong> — mandatory for interstate e-commerce supply regardless of turnover.</li>
+    <li><strong>Trademark, Class 35</strong> — device mark, after a clearance search.</li>
+    <li><strong>Shops &amp; Establishments</strong> — state-level, wherever you operate from.</li>
+    <li><strong>EPR with CPCB</strong> — before the first battery or electronic item ships.</li>
+  </ol>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="n">06</span> What this forces in the code</h2>
+
+  <p>Ordered by what blocks launch, not by size.</p>
+
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Change</th><th>Driver</th><th class="num">Est.</th></tr></thead>
+    <tbody>
+      <tr><td>Real authentication — replace the six-digit stub with OTP or password + session</td>
+          <td>Security; everything customer-facing depends on it</td><td class="num">2–3 d</td></tr>
+      <tr><td>Rate limiting on tracking, sign-in, search and every server action</td>
+          <td>Security; enumeration</td><td class="num">1 d</td></tr>
+      <tr><td>Product fields: <code>countryOfOrigin</code>, <code>mrp</code>,
+              <code>netQuantity</code>, <code>importerName</code>, <code>importerAddress</code>
+              — plus importer columns and PDP rendering</td>
+          <td>Legal Metrology Rule 6(1)</td><td class="num">3–4 d</td></tr>
+      <tr><td>Country-of-origin facet on category pages — searchable and sortable</td>
+          <td>Amendment Rules 2026, sub-rule 10A</td><td class="num">1–2 d</td></tr>
+      <tr><td>Grievance Officer page, returns policy, seller details</td>
+          <td>Consumer Protection (E-Commerce) Rules 2020</td><td class="num">1 d</td></tr>
+      <tr><td>Structured logging with 180-day retention, in-region</td>
+          <td>CERT-In</td><td class="num">1 d</td></tr>
+      <tr><td>Anonymise-in-place for DPDP erasure, preserving invoices six years</td>
+          <td>DPDP × GST retention</td><td class="num">1–2 d</td></tr>
+      <tr><td>Payment gateway integration</td><td>Taking money</td><td class="num">2–3 d</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Roughly <strong>three focused weeks</strong> of engineering, running alongside the two-to-three
+     weeks the registrations take anyway.</p>
+</section>
+
+<!-- ============================================================ -->
+<section>
+  <h2><span class="n">07</span> The supplier feed, as it now stands</h2>
+
+  <p>Built and working. <code>tools/feeds/pull.mjs</code> pulls both sources into importer-shaped
+     CSV, and a robu batch has been through the real dry run.</p>
+  <ul>
+    <li><strong>Incremental by default</strong> — the sitemap's <code>lastmod</code> against a state
+        file, so a nightly run fetches what changed instead of re-walking 110,000 pages.</li>
+    <li><strong>Chunked output</strong> — the importer's dry run parses in the browser, so a
+        110,000-row CSV is a hung tab. 2,000 rows per file, and a chunk is the unit of recovery.</li>
+    <li><strong>robots.txt checked, not assumed</strong> — the run aborts rather than continuing to
+        hammer a path that has since been disallowed.</li>
+    <li><strong>Gaps reported out loud</strong> — unmapped categories, estimated weights, and every
+        row missing a country of origin are counted at the end of each run.</li>
+  </ul>
+
+  <div class="note warn">
+    <span class="label">The honest limit</span>
+    <p>Scraping is the easy fifth of this. The importer requires an HSN code, a shipping weight and
+       a category in <em>our</em> taxonomy for every new product, and no supplier publishes the
+       first, neither publishes country of origin, and the third is a judgement call. The first
+       version of the category mapper filed a can of spray paint as a drone ESC, because
+       "Fluorescent" contains "esc" — it now matches whole words and has a self-check, but keyword
+       matching mis-files by nature. Rows guessed from a title are flagged separately for exactly
+       this reason. The highest-value next step is a classifier pass over the titles to fill the
+       mapping properly; that is where a multi-agent setup genuinely earns its place, and it is not
+       the scraping.</p>
+  </div>
+</section>
+
+<footer>
+  <span class="label">Sources checked 7 August 2026</span>
+  <ol>
+    <li><a href="https://www.ey.com/en_in/insights/cybersecurity/transforming-data-privacy-digital-personal-data-protection-rules-2025">DPDP Rules 2025 notified by MeitY — EY India</a></li>
+    <li><a href="https://static.pib.gov.in/WriteReadData/specificdocs/documents/2025/nov/doc20251117695301.pdf">DPDP Rules, 2025 Notified — Press Information Bureau</a></li>
+    <li><a href="https://www.taxmann.com/post/blog/analysis-indias-dpdp-act-and-rules">India's DPDP Act and Rules — timeline, obligations, enforcement (Taxmann)</a></li>
+    <li><a href="https://amlegals.com/cert-in-compliance-guide-2025/">CERT-In Directions compliance guide — 6-hour reporting, 180-day logs</a></li>
+    <li><a href="https://www.mondaq.com/india/dodd-frank-consumer-protection-act/1806934/legal-metrology-packaged-commodities-amendment-rules-2026-enhancing-transparency-and-consumer-protection-in-e-commerce">Legal Metrology (Packaged Commodities) Amendment Rules, 2026 — Mondaq</a></li>
+    <li><a href="https://digitalpolicyalert.org/event/38270-legal-metrology-packaged-commodities-amendment-rules-2026-enter-into-force">Country-of-origin filter mandate, in force 1 July 2026 — Digital Policy Alert</a></li>
+    <li><a href="https://ssrana.in/articles/legal-metrology-compliance-for-e-commerce-businesses/">Legal Metrology compliance for e-commerce — SS Rana &amp; Co</a></li>
+    <li><a href="https://www.intepat.com/blog/trademark-registration-fees-india">Trademark registration fees India 2026 — Intepat</a></li>
+    <li><a href="https://www.agileregulatory.com/blogs/bis-registration-for-lithium-ion-batteries-under-crs">BIS registration for lithium-ion batteries under CRS — Agile Regulatory</a></li>
+    <li><a href="https://www.diligencecertification.com/bis-crs-for-lithium-batteries-india/">BIS CRS for lithium batteries, IS 16046 — Diligence Certification</a></li>
+  </ol>
+</footer>
+
+</div>

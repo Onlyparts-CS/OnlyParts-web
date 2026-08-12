@@ -1,0 +1,13 @@
+import pg from "pg";
+const c = new pg.Client("postgres://onlyparts:onlyparts@localhost:5433/onlyparts");
+await c.connect();
+const t = await c.query(`SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY 1`);
+console.log("TABLES:", t.rows.map(r => r.table_name).join(", "));
+const u = await c.query(`SELECT column_name, data_type FROM information_schema.columns WHERE table_name='users' ORDER BY ordinal_position`);
+console.log("\nusers:");
+for (const r of u.rows) console.log(`  ${r.column_name} : ${r.data_type}`);
+const m = await c.query(`SELECT column_name FROM information_schema.columns WHERE table_name='media' ORDER BY ordinal_position`);
+console.log("\nmedia:", m.rows.map(r => r.column_name).join(", "));
+const n = await c.query(`SELECT count(*)::int AS n FROM users`);
+console.log("\nusers rows:", n.rows[0].n);
+await c.end();
