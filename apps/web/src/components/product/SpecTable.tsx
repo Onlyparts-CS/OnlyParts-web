@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SPEC_GROUPS, SPEC_LABELS, hsnFor } from "@/lib/product";
 import { inr } from "@/lib/catalog";
+import { originValue, packerLabel } from "@/lib/legal";
 import type { Sku } from "@/lib/skus";
 import { CheckIcon } from "@/components/Icons";
 
@@ -48,9 +49,15 @@ export function SpecTable({ sku }: { sku: Sku }) {
     rows: [
       { key: "hsn", label: "HSN code", value: hsn.code },
       { key: "gst", label: "GST rate", value: `${hsn.rate}%` },
-      ...(legal?.countryOfOrigin
-        ? [{ key: "origin", label: "Country of origin", value: legal.countryOfOrigin }]
-        : []),
+      /*
+        Origin prints unconditionally, and says so when we do not hold it. The
+        other rows stay conditional — an absent net quantity is a row worth
+        omitting. Origin is not: it is the declaration a buyer looks for, and
+        dropping the line on the 99.93% of rows lacking it reads as though the
+        question was never asked. Wording lives in `lib/legal.ts`, which is
+        checked; getting it wrong is an offence, not a rendering bug.
+      */
+      { key: "origin", label: "Country of origin", value: originValue(legal) },
       ...(legal?.netQuantity
         ? [{ key: "netqty", label: "Net quantity", value: legal.netQuantity }]
         : []),
@@ -60,10 +67,7 @@ export function SpecTable({ sku }: { sku: Sku }) {
       ...(legal?.importerName
         ? [{
             key: "importer",
-            // Rule 6(1) asks for the importer on imported goods and the
-            // manufacturer or packer on domestic ones — same field, and the
-            // label has to say which or the declaration is wrong.
-            label: legal.countryOfOrigin === "India" ? "Packed by" : "Imported by",
+            label: packerLabel(legal.countryOfOrigin),
             value: [legal.importerName, legal.importerAddress].filter(Boolean).join(", "),
           }]
         : []),

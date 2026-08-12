@@ -216,16 +216,23 @@ export const Products: CollectionConfig = {
 
       Six declarations must appear on the listing of anything sold pre-packed:
       origin, MRP inclusive of all taxes, net quantity, and the name and address
-      of whoever imported or packed it. Since 1 July 2026 sub-rule 10A also
-      requires imported goods to be *filterable* by origin, which is why
-      `countryOfOrigin` is a select and indexed rather than free text — a facet
-      built over "India" / "india" / "INDIA" is three filters for one country.
+      of whoever imported or packed it. A searchable/sortable origin filter is
+      also coming, which is why `countryOfOrigin` is a select and indexed rather
+      than free text — a facet built over "India" / "india" / "INDIA" is three
+      filters for one country.
+
+      (This block previously said the filter has been mandatory "since 1 July
+      2026". Sources disagree: it was a draft dated 10 Nov 2025 covering imported
+      goods only, and the 2026 Second Amendment puts certain provisions at 1 July
+      2027. The date needs confirming alongside the HSN codes — do not act on
+      either number as written.)
 
       None of these are `required`, and that is deliberate. 116,719 supplier rows
       import with them empty, and a required field would reject the entire
       catalogue rather than letting it land as drafts to be completed. The rule
       is not "a product must have these", it is "a *listing* must" — so the gate
-      is on going active. See `rule6` below.
+      is on going active. See `rule6` below. `countryOfOrigin` is the deliberate
+      exception and carries its own note.
     */
     {
       type: "collapsible",
@@ -240,8 +247,20 @@ export const Products: CollectionConfig = {
           type: "select",
           index: true,
           options: ORIGINS.map((c) => ({ label: c, value: c })),
-          validate: rule6("Country of origin"),
-          admin: { description: "Origin of the goods you imported, from the Bill of Entry — not the brand's home country." },
+          /*
+            The one declaration that does NOT gate going Active.
+
+            Measured on the harvested feeds: 89 of 119,864 rows carry an origin,
+            because none of the four suppliers publishes it — the live pages were
+            checked, not assumed. Gating on it means the catalogue never lists.
+
+            The alternative was defaulting it to "India", and that is worse than
+            leaving it out: an absent declaration is an omission, a wrong one is a
+            misdeclaration, and Rule 6(1) punishes the second. So the PDP prints
+            "Not declared" (`SpecTable.tsx`) and the completeness queue counts it.
+            Fill it from the Bill of Entry and the row stops saying so.
+          */
+          admin: { description: "Origin of the goods you imported, from the Bill of Entry — not the brand's home country. Left blank, the listing says \"Not declared\"." },
         },
         {
           type: "row",

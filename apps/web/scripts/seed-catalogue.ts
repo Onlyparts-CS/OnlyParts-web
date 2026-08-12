@@ -246,9 +246,18 @@ async function main() {
           hsnCode: hsnFor(catPath[0]),
           gstRate: "18",
           // Rule 6(1) declarations. `rule6` in Products.ts gates `active` on
-          // these, so a seed that publishes must carry them. Placeholder values:
-          // real listings take theirs from the Bill of Entry at import.
-          countryOfOrigin: "India",
+          // these, so a seed that publishes must carry them.
+          //
+          // `countryOfOrigin` is deliberately absent and must stay absent. It
+          // no longer gates publishing precisely so that nothing has to invent
+          // one, and seeding "India" here would put a fabricated declaration on
+          // every product — the misdeclaration the omission exists to avoid.
+          // These rows render "Not declared" like any other unverified listing.
+          //
+          // The other four are placeholders in the sense that a real listing
+          // takes them from the Bill of Entry, but each is a claim we can stand
+          // behind for seeded fixtures: OnlyParts is the packer, the unit is one
+          // piece, and the MRP is a ceiling above the selling price.
           mrp: Math.ceil(sku.price * 1.15),
           netQuantity: "1 piece",
           importerName: "OnlyParts",
