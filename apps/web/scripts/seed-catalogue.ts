@@ -1,6 +1,6 @@
 import { getPayload } from "payload";
 import config from "@payload-config";
-import { CATEGORIES } from "../src/lib/catalog";
+import { CATEGORIES, PROJECTS } from "../src/lib/catalog";
 import { SCHEMAS, UNIVERSAL, slugify, type AttrDef } from "../src/lib/taxonomy";
 import { allSkus } from "../src/lib/skus";
 import { familyTitle, variantSuffix, weightFor } from "./seedHelpers";
@@ -369,6 +369,36 @@ async function main() {
   }
 
   console.log(`  ✓ Seeded ${productCount} products, ${variantCount} variants, and ${ledgerCount} inventory movements.\n`);
+
+  /*
+    6. Seed Builds
+
+    Step 1 wiped `builds` and nothing ever put them back, so the collection sat
+    empty while `PROJECTS` in `lib/catalog.ts` went on listing six of them. Two
+    things broke on that: `/projects/repair-bench` had no record to render, and
+    every feed row carrying a `projects` column failed the import with
+    `unknown project slug "repair-bench" — expected one of (no builds defined)`
+    — 1,650 rows of a 3,800-row sheet.
+
+    Items are left empty on purpose. The import appends products to
+    `builds.items`, which is where a build's contents are supposed to come
+    from; seeding a curated list here would fight it.
+  */
+  console.log("🏗️  Seeding Builds...");
+  for (const [i, project] of PROJECTS.entries()) {
+    await payload.create({
+      collection: "builds",
+      data: {
+        name: project.name,
+        slug: project.slug,
+        glyph: project.glyph,
+        position: i,
+      },
+      ...req,
+    } as never);
+  }
+  console.log(`  ✓ Seeded ${PROJECTS.length} builds.\n`);
+
   console.log("✨ Seed completed successfully!");
 }
 
