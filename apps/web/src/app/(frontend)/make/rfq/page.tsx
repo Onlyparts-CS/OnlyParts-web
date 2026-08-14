@@ -335,7 +335,9 @@ export default function RfqPage() {
               <In label="GSTIN (optional)" v={gstin} on={(x) => setGstin(x.toUpperCase().slice(0, 15))} mono />
             </div>
 
-            {error && <p className="mt-3 text-[0.75rem] text-danger">{error}</p>}
+            {/* Form-level, not field-level — nothing to mark aria-invalid on,
+                so it needs announcing on appearance instead. */}
+            {error && <p role="alert" className="mt-3 text-[0.75rem] text-danger">{error}</p>}
 
             <Summary
               files={files.length} process={proc?.name} material={material}

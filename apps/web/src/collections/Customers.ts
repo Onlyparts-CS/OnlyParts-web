@@ -39,9 +39,6 @@ const selfOrStaff: Access = ({ req: { user } }) => {
   return false;
 };
 
-const staffOnly: Access = ({ req: { user } }) =>
-  Boolean(user && user.collection === "users");
-
 export const Customers: CollectionConfig = {
   slug: "customers",
   admin: {

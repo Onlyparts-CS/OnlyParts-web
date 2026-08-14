@@ -74,6 +74,8 @@ export function ProductsTable({ skus }: { skus: Sku[] }) {
           <SearchIcon className="size-4 shrink-0 text-spot-600" />
           <input
             value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }}
+            type="search"
+            aria-label="Search products by SKU, title or attribute value"
             placeholder="Search SKU, title or any attribute value — try &ldquo;m3 12.9&rdquo;"
             className="h-full w-full bg-transparent font-mono text-[0.8125rem] text-heading outline-none placeholder:text-disabled"
           />

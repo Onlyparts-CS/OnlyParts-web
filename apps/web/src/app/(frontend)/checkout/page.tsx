@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { DeadEnd } from "@/components/DeadEnd";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useStore, saveAddress, clearCart, recordPurchase } from "@/lib/store";
 import { submitOrder } from "./actions";
 import { useResolvedCart } from "@/lib/useCatalogue";
@@ -190,17 +190,20 @@ export default function CheckoutPage() {
               <Field label="PIN code" value={pincode} onChange={onPincode} error={err("pincode")} inputMode="numeric" autoComplete="postal-code" />
               <Field label="City" value={city} onChange={setCity} error={err("city")} autoComplete="address-level2" />
               <div className="sm:col-span-2">
-                <label className="mb-1.5 block text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-faint">
+                <label htmlFor="checkout-state" className="mb-1.5 block text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-faint">
                   State <span className="font-normal normal-case tracking-normal text-disabled">— sets place of supply</span>
                 </label>
                 <select
+                  id="checkout-state"
                   value={stateCode} onChange={(e) => setStateCode(e.target.value)}
+                  aria-invalid={err("stateCode") ? true : undefined}
+                  aria-describedby={err("stateCode") ? "checkout-state-error" : undefined}
                   className={`h-11 w-full rounded-sm border bg-surface px-3 text-[0.9375rem] text-heading outline-none focus:border-spot-600 ${err("stateCode") ? "border-danger" : "border-line"}`}
                 >
                   <option value="">Select state…</option>
                   {STATES.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
                 </select>
-                {err("stateCode") && <p className="mt-1 text-[0.75rem] text-danger">{err("stateCode")}</p>}
+                {err("stateCode") && <p id="checkout-state-error" className="mt-1 text-[0.75rem] text-danger">{err("stateCode")}</p>}
               </div>
             </div>
 
@@ -356,18 +359,30 @@ function Field({
   type?: string; mono?: boolean; prefix?: string; placeholder?: string;
   inputMode?: "text" | "numeric" | "email"; autoComplete?: string;
 }) {
+  /*
+    The label used to be a bare <label> beside the input rather than around it
+    or bound to it, so it named nothing: every field on the checkout form was
+    announced as an unlabelled text box. The border also carried the error on
+    its own, which is colour as the sole indicator.
+  */
+  const id = useId();
+  const errorId = `${id}-error`;
+
   return (
     <div>
-      <label className="mb-1.5 block text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-faint">{label}</label>
+      <label htmlFor={id} className="mb-1.5 block text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-faint">{label}</label>
       <div className={`flex h-11 items-center rounded-sm border bg-surface ${error ? "border-danger" : "border-line focus-within:border-spot-600"}`}>
         {prefix && <span className="pl-3 font-mono text-[0.8125rem] text-disabled">{prefix}</span>}
         <input
+          id={id}
           type={type} value={value} placeholder={placeholder} inputMode={inputMode} autoComplete={autoComplete}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
           onChange={(e) => onChange(e.target.value)}
           className={`h-full w-full bg-transparent px-3 text-[0.9375rem] text-heading outline-none placeholder:text-disabled ${mono ? "font-mono" : ""}`}
         />
       </div>
-      {error && <p className="mt-1 text-[0.75rem] text-danger">{error}</p>}
+      {error && <p id={errorId} className="mt-1 text-[0.75rem] text-danger">{error}</p>}
     </div>
   );
 }

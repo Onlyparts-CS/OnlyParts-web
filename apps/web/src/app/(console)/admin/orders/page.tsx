@@ -49,8 +49,8 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
           <h1 className="text-[clamp(1.5rem,3vw,2.25rem)]">Orders</h1>
           <p className="mt-2 max-w-2xl text-muted">
             Every order placed, newest first. Fulfilment and payment are separate
-            states — cash on delivery ships before it is paid, and one column cannot
-            say that.
+            states: the legacy cash-on-delivery orders shipped before they were paid,
+            and one column cannot say that. New orders are all paid online first.
           </p>
         </div>
         <p className="bin shrink-0">

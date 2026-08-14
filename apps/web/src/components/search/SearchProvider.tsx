@@ -147,6 +147,10 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
                 onKeyDown={onKeyDown}
                 placeholder="M3x10 SS304 socket head…"
                 className="min-w-0 flex-1 bg-transparent font-mono text-[1.0625rem] text-heading outline-none placeholder:text-disabled"
+                /* A combobox role without an accessible name is announced as
+                   just "combobox"; the placeholder is an example query, not a
+                   name, and disappears the moment anything is typed. */
+                aria-label="Search parts"
                 role="combobox" aria-expanded aria-controls="search-results" aria-autocomplete="list"
                 autoComplete="off" enterKeyHint="search"
               />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { errorCsv, SAMPLE_CSV, IMPORT_FIELDS, type DryRun, type RowOutcome } from "@/lib/import";
 import { analyseImport, commitImport, type CommitResult } from "./actions";
@@ -85,6 +86,20 @@ export function ImportWorkbench({ projectSlugs }: { projectSlugs: string[] }) {
     setFilename(""); setCsv(""); setFilter("all");
   };
 
+  const liveStatus = error
+    ? `Stopped. ${error}`
+    : pending
+      ? phase === "review" ? "Writing rows…" : "Reading the file…"
+      : phase === "review" && result
+        ? `${filename} checked. ${result.create} to create, ${result.update} to update, `
+          + `${result.unchanged} unchanged, ${result.errors} with errors.`
+          + (result.blockers.length ? ` Blocked: ${result.blockers.join(" ")}` : "")
+          + (result.bulkChange && !confirmBulk ? " Confirm the bulk change to continue." : "")
+        : phase === "done" && commit?.ok
+          ? `Import written. ${commit.created} created, ${commit.updated} updated, `
+            + `${commit.skipped} skipped, ${commit.failures.length} failed.`
+          : "";
+
   return (
     <div className="container-page page-shell">
       <h1 className="text-[clamp(1.5rem,3vw,2.25rem)]">Bulk import</h1>
@@ -98,6 +113,18 @@ export function ImportWorkbench({ projectSlugs }: { projectSlugs: string[] }) {
           <strong>Stopped.</strong> {error}
         </p>
       )}
+
+      {/*
+        One region for the whole screen rather than aria-live on each block.
+
+        This is a three-phase form where the phases replace each other, and a
+        live region only announces mutations to a subtree that was already in
+        the accessibility tree — marking up the results panel itself announces
+        nothing, because the panel does not exist until the moment it appears.
+        A committed 3,800-row write is exactly the point at which an operator
+        who cannot see the counts most needs telling that it finished.
+      */}
+      <p aria-live="polite" className="sr-only">{liveStatus}</p>
 
       {/* ---------------- upload ---------------- */}
       {phase === "upload" && (
@@ -120,6 +147,7 @@ export function ImportWorkbench({ projectSlugs }: { projectSlugs: string[] }) {
                 Browse files
               </button>
               <input ref={inputRef} type="file" accept=".csv,text/csv" className="sr-only"
+                aria-label="Choose a CSV file to import"
                 onChange={(e) => onFile(e.target.files?.[0])} />
               <p className="mt-4 font-mono text-[0.6875rem] text-disabled">
                 CSV · first row is the header · rows commit in chunks of 100
@@ -352,7 +380,7 @@ export function ImportWorkbench({ projectSlugs }: { projectSlugs: string[] }) {
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <button onClick={reset} className="btn btn-secondary btn-sm">Import another file</button>
-                <a href="/admin/products" className="btn btn-ghost btn-sm">See the catalogue</a>
+                <Link href="/admin/products" className="btn btn-ghost btn-sm">See the catalogue</Link>
               </div>
             </div>
           </div>

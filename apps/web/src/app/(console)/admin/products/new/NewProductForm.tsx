@@ -97,7 +97,7 @@ export function NewProductForm({ leaves, brands }: { leaves: Leaf[]; brands: Bra
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="grid gap-6">
         {errors._ && (
-          <p className="border border-danger/40 bg-danger-bg p-3 text-[0.875rem] text-danger">{errors._}</p>
+          <p role="alert" className="border border-danger/40 bg-danger-bg p-3 text-[0.875rem] text-danger">{errors._}</p>
         )}
 
         <Card title="What it is" note="This is the heading and the first paragraph on the product page.">
