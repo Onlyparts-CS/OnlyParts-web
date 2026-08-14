@@ -274,7 +274,25 @@ function toSku(v: VariantRow, ctx: Ctx): Sku | null {
       : sourceImage
         ? { url: sourceImage, alt: title }
         : undefined,
-    images: shots.length ? shots : undefined,
+    /*
+      The hotlinked photograph has to reach the gallery too, not just the tile.
+
+      `image` fed the tile and `images` fed the product page, and only `images`
+      came from uploaded media — which is empty. So every tile in the catalogue
+      showed a photograph while every product page it linked to showed the
+      drawn plate, on the same product, from the same row. It read as a bug in
+      the photography rather than in the plumbing.
+
+      It lands in the `hero` slot because that is the only claim the picture
+      can honestly satisfy: the other three slots promise a top-down, a coin
+      for scale and a drawing, and a supplier's single catalogue shot is none
+      of those. Those slots keep their plate until a real photograph exists.
+    */
+    images: shots.length
+      ? shots
+      : sourceImage
+        ? [{ role: "hero", url: sourceImage, alt: title }]
+        : undefined,
     price: v.basePrice,
     breaks,
     stock: ctx.stockByVariant.get(String(v.id)) ?? 0,

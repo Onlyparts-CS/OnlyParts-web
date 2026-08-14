@@ -140,12 +140,28 @@ const CORE_FIELDS = [
 export const IMAGE_HOSTS = ["cdn.shopify.com", "robu-prod-media.s3.ap-south-1.amazonaws.com"];
 
 /** The image on a row, or "" when it is absent or not from a host we allow. */
+/**
+ * Filenames that are on a product page but are not a photograph of the product.
+ *
+ * A crawler takes the largest image it finds, which on a Shopify theme is
+ * sometimes the theme's own furniture. Two products in the current sheet were
+ * carrying `LeagueSpartan_30.png` — a type specimen for the shop's heading
+ * font — as their catalogue photograph. Nothing downstream can tell that from
+ * a screw, because it is a valid PNG on an allowed host.
+ *
+ * Deliberately narrow. Matching on "badge" or "panel" would throw away the
+ * name-badge magnets and solar panels this catalogue actually sells, so this
+ * only names things that cannot be a product here.
+ */
+const NOT_A_PRODUCT = /leaguespartan|(^|[-_/])(logo|favicon|placeholder|sprite)[-_.]|\.svg$/i;
+
 export function imageUrl(raw: string | undefined): string {
   const v = (raw ?? "").trim();
   if (!v) return "";
   try {
     const u = new URL(v);
-    return u.protocol === "https:" && IMAGE_HOSTS.includes(u.host) ? v : "";
+    if (u.protocol !== "https:" || !IMAGE_HOSTS.includes(u.host)) return "";
+    return NOT_A_PRODUCT.test(u.pathname) ? "" : v;
   } catch {
     return "";
   }

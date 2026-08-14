@@ -269,6 +269,25 @@ const errs = (extra: Record<string, string> = {}) => {
   ]) {
     assert.equal(imageUrl(bad as string), "", `must reject ${JSON.stringify(bad)}`);
   }
+
+  // Theme furniture on an allowed host: a valid PNG that is not the product.
+  // Two products shipped with a heading-font specimen as their photograph.
+  for (const furniture of [
+    "https://cdn.shopify.com/s/files/1/x/LeagueSpartan_30.png?v=1725810543",
+    "https://cdn.shopify.com/s/files/1/x/logo-dark.png",
+    "https://cdn.shopify.com/s/files/1/x/placeholder_600x.png",
+    "https://cdn.shopify.com/s/files/1/x/icons.svg",
+  ]) {
+    assert.equal(imageUrl(furniture), "", `must reject theme furniture: ${furniture}`);
+  }
+
+  // ...but must not throw away products whose names merely resemble furniture.
+  for (const real of [
+    "https://cdn.shopify.com/s/files/1/x/17mm_Round_Name_Badge_Magnet.png",
+    "https://cdn.shopify.com/s/files/1/x/5W_12V_Solar_Panel_Outdoor.jpg",
+  ]) {
+    assert.equal(imageUrl(real), real, `must keep a real product: ${real}`);
+  }
 }
 
 /*
