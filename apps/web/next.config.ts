@@ -14,6 +14,23 @@ const nextConfig: NextConfig = {
     what this server requests. `imageUrl()` in `lib/import.ts` rejects the same
     set on the way in, so it takes both to be wrong.
   */
+  /*
+    The sheet is the argument, so the action body has to hold a whole CSV.
+
+    `commitImport` takes the CSV text rather than the browser's computed diff —
+    deliberately, so the server re-runs the same dry run before writing a row.
+    That makes the upload a Server Action body, and the default cap is 1 MB.
+    Adding the `image` column pushed the 3,800-row demo sheet to 1.1 MB and
+    every commit started failing with "Body exceeded 1 MB limit".
+
+    4 MB, not unlimited: `pull.mjs` chunks its output at 2,000 rows for exactly
+    this reason, and a limit that fits two of those chunks keeps the guard rail
+    while leaving the documented workflow room.
+  */
+  experimental: {
+    serverActions: { bodySizeLimit: "4mb" },
+  },
+
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "cdn.shopify.com" },

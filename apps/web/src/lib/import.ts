@@ -100,6 +100,17 @@ export const RULE6_GATED = ["mrp", "net_quantity", "importer_name", "importer_ad
 export const rule6Complete = (row: ImportRow) =>
   RULE6_GATED.every((f) => row[f]?.trim());
 
+/**
+ * Core columns that live on the product and that a re-import may correct.
+ *
+ * Not `title` (diffed against a value we hold) and not `sku`, `category`,
+ * `hsn`, `gst_rate`, `price`, `stock` or `projects`, which have their own
+ * handling above.
+ */
+const PRODUCT_FIELDS = [
+  "country_of_origin", "mrp", "net_quantity", "importer_name", "importer_address", "image",
+] as const;
+
 /** Columns that are the product/variant itself rather than one of its specs. */
 const CORE_FIELDS = [
   "sku", "title", "price", "stock", "hsn", "gst_rate", "weight_g", "category", "projects",
@@ -409,6 +420,24 @@ function diff(existing: CatalogueRow, row: ImportRow): FieldChange[] {
     if (!IMPORT_FIELDS.includes(k as never) || !v) continue;
     push(k, existing.attrs[k], v);
   }
+
+  /*
+    Product-level columns the preview used to stay silent about.
+
+    `updateRow` writes these now, and a diff that does not mention a field the
+    commit is about to change is worse than no diff — the whole contract of
+    this screen is that nothing lands until a human has seen the counts.
+
+    `existing` does not carry their current values (it is built for matching,
+    not for rendering), so these show as "set" rather than "a -> b". That is
+    honest about what is known: the sheet has a value and the commit will
+    apply it. Widening `CatalogueRow` to diff them properly costs a column per
+    field on a query that already reads the whole catalogue.
+  */
+  for (const k of PRODUCT_FIELDS) {
+    if (row[k]?.trim()) push(k, "", row[k].trim());
+  }
+
   return changes;
 }
 

@@ -461,12 +461,38 @@ async function updateRow(
     stock: existing.stock,
   };
 
+  /*
+    Product-level fields, in one write.
+
+    This used to patch `title` alone, so a re-import could not correct an MRP,
+    add a country of origin, or backfill an image — the columns were read,
+    diffed and then only ever applied to rows being created. A catalogue you
+    can only fix by deleting and re-importing is not one you can fix.
+
+    Every field is conditional on the sheet actually carrying it: a CSV that
+    omits a column means "I did not mention it", not "blank it out". `status`
+    is deliberately not here — promoting a draft to Active is a decision a
+    human makes in the console, not a side effect of a re-upload.
+  */
+  const productPatch: Record<string, unknown> = {};
   if (row.title?.trim() && row.title.trim() !== existing.title) {
+    productPatch.title = row.title.trim();
+  }
+  if (row.country_of_origin?.trim()) productPatch.countryOfOrigin = row.country_of_origin.trim();
+  if (row.mrp?.trim()) productPatch.mrp = toPaise(row.mrp);
+  if (row.net_quantity?.trim()) productPatch.netQuantity = row.net_quantity.trim();
+  if (row.importer_name?.trim()) productPatch.importerName = row.importer_name.trim();
+  if (row.importer_address?.trim()) productPatch.importerAddress = row.importer_address.trim();
+
+  const img = imageUrl(row.image);
+  if (img) productPatch.sourceImageUrl = img;
+
+  if (Object.keys(productPatch).length) {
     await payload.update({
       collection: "products",
       id: existing.productId,
       user, overrideAccess: false,
-      data: { title: row.title.trim() } as never,
+      data: productPatch as never,
     });
   }
 

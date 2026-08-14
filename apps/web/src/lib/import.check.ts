@@ -271,4 +271,43 @@ const errs = (extra: Record<string, string> = {}) => {
   }
 }
 
+/*
+  A re-import must be able to correct a product-level field, and the preview
+  must say so before it does.
+
+  These were read, diffed against nothing, and applied only on create. The
+  catalogue could not be fixed by re-uploading a corrected sheet — only by
+  deleting it and starting again.
+*/
+{
+  const ctx2 = {
+    ...ctx,
+    existing: [{
+      sku: "OP-LM1", variantId: 1, productId: 1, title: "M3 Hex Nut",
+      price: 10000, stock: 5, projects: [], attrs: {},
+    }],
+  };
+  const changed = (extra: Record<string, string>) => {
+    const row = { ...base, ...extra };
+    const headers = Object.keys(row);
+    const csv = `${headers.join(",")}\n${headers.map((h) => row[h]).join(",")}\n`;
+    const parsed = parseCsv(csv);
+    const o = dryRun(parsed.rows, parsed.headers, ctx2).outcomes[0];
+    return o.kind === "update" ? o.changes.map((c) => c.field) : [];
+  };
+
+  const fields = changed({
+    mrp: "150", net_quantity: "1 piece",
+    importer_name: "OnlyParts", importer_address: "Bengaluru",
+    country_of_origin: "India",
+    image: "https://cdn.shopify.com/s/files/1/x/nut.jpg",
+  });
+  for (const f of ["mrp", "net_quantity", "importer_name", "importer_address", "country_of_origin", "image"]) {
+    assert.ok(fields.includes(f), `${f} must appear in the diff, got ${JSON.stringify(fields)}`);
+  }
+
+  // A sheet that omits a column means "I did not mention it", not "blank it".
+  assert.deepEqual(changed({}), [], "an unchanged row is still unchanged");
+}
+
 console.log("import.check.ts — Rule 6(1) assertions passed");
