@@ -498,6 +498,39 @@ function originFrom(specs) {
   return "";
 }
 
+/* ------------------------------------------------------------------ *
+ * CSV — only the columns `IMPORT_FIELDS` understands. Everything else
+ * (image, description, source URL) stays in the JSON, because the importer
+ * warns on unknown columns and a warning per row is noise that hides the
+ * warnings that matter.
+ *
+ * Declared up here rather than beside `writeOut`, because `selfCheck` runs at
+ * module top level and a `const` is not hoisted — same reason `SPEC_COLUMNS`
+ * sits above `originFrom`.
+ * ------------------------------------------------------------------ */
+
+// `country_of_origin` carries the ~90 rows a supplier happened to state. The
+// other four Rule 6(1) columns the importer understands are not emitted: the
+// crawl has no source for them, and an empty column on 119,864 rows is noise.
+const CSV_COLS = [
+  "sku", "title", "price", "stock", "hsn", "gst_rate", "weight_g", "category", "projects",
+  "country_of_origin",
+  // Typed spec columns, populated only where `typedSpecs` could prove the
+  // mapping. Mostly blank across the whole feed, and that is the honest state:
+  // no supplier publishes a structured attribute table.
+  "compatibility", "material", "finish", "coating", "grade", "thread",
+  "length_mm", "dia_mm", "bore_id_mm", "outer_od_mm", "width_mm", "thickness_mm", "shaft_dia_mm",
+];
+
+const cell = (v) => {
+  const s = String(v ?? "");
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+function toCsv(rows) {
+  return [CSV_COLS.join(","), ...rows.map((r) => CSV_COLS.map((c) => cell(r[c])).join(","))].join("\n");
+}
+
 /** Pipe-separated build slugs for the CSV's `projects` column. Usually empty. */
 function projectsFor(category) {
   if (!category) return "";
@@ -792,9 +825,40 @@ function selfCheck() {
     }
   }
 
+  /*
+    Every value `enrich` computes has to survive the trip into a CSV cell.
+
+    It did not: `enrich` emitted `countryOfOrigin` while `CSV_COLS` reads
+    `country_of_origin`, so `toCsv` looked up a key that was never there and
+    wrote a blank. All 89 harvested origin declarations — the one Rule 6(1)
+    field we had any data for at all — reached the importer empty, and nothing
+    failed, because a blank cell is what 119,775 other rows legitimately have.
+
+    So this asserts on the rendered line rather than on the object: read the
+    header, find the column, and check the value is in it. A rename on either
+    side breaks it.
+  */
+  const shapeCases = [
+    ["country_of_origin", "India", { specs: { "Country of Origin": "India" } }],
+    ["compatibility", "Arduino UNO", { specs: { Compatibility: "Arduino UNO" } }],
+    ["thread", "M6", { specs: { "Thread Size": "M6" } }],
+    ["hsn", "", { specs: {} }],
+  ];
+  for (const [column, want, row] of shapeCases) {
+    const [head, line] = toCsv([enrich({ sku: "X", title: "test part", ...row })]).split("\n");
+    const at = head.split(",").indexOf(column);
+    const got = at < 0 ? "(no such column)" : (line.split(",")[at] ?? "");
+    // `hsn` carries no expectation beyond "the column exists" — an unmapped
+    // row genuinely has none, and asserting a value would pin the map.
+    if (at < 0 || (want && got !== want)) {
+      console.error(`  ✗ ${column} does not reach its CSV cell\n      want ${want || "(a column)"} · got ${got || "(blank)"}`);
+      failed++;
+    }
+  }
+
   const total =
     cases.length + parkCases.length + resolveCases.length + projectCases.length +
-    originCases.length + specCases.length;
+    originCases.length + specCases.length + shapeCases.length;
   console.log(failed ? `\n${failed}/${total} failed` : `${total}/${total} passed`);
   process.exit(failed ? 1 : 0);
 }
@@ -838,8 +902,14 @@ function enrich(row) {
       are worth taking; the other 119,700 still have to come off the import
       documents. The counter at the end of a run reports the gap out loud
       rather than the gap being discovered by an inspector.
+
+      Named for the CSV column, like every other emitted field here. It was
+      `countryOfOrigin` for one release and `CSV_COLS` reads `country_of_origin`,
+      so all 89 harvested declarations were written as an empty cell and the
+      only legally-required field we had any data for reached the importer
+      blank. `csvShape()` in the self-check now fails if that drifts again.
     */
-    countryOfOrigin: row.countryOfOrigin || originFrom(row.specs),
+    country_of_origin: row.countryOfOrigin || originFrom(row.specs),
     /*
       76% of harvested rows carry a spec block and the CSV used to emit none of
       it, so every imported part landed with an empty spec table. Only the
@@ -1159,35 +1229,6 @@ async function pullRobu(limit, concurrency, state, full) {
   return out;
 }
 
-/* ------------------------------------------------------------------ *
- * CSV — only the columns `IMPORT_FIELDS` understands. Everything else
- * (image, description, source URL) stays in the JSON, because the importer
- * warns on unknown columns and a warning per row is noise that hides the
- * warnings that matter.
- * ------------------------------------------------------------------ */
-
-// `country_of_origin` carries the ~90 rows a supplier happened to state. The
-// other four Rule 6(1) columns the importer understands are not emitted: the
-// crawl has no source for them, and an empty column on 119,864 rows is noise.
-const CSV_COLS = [
-  "sku", "title", "price", "stock", "hsn", "gst_rate", "weight_g", "category", "projects",
-  "country_of_origin",
-  // Typed spec columns, populated only where `typedSpecs` could prove the
-  // mapping. Mostly blank across the whole feed, and that is the honest state:
-  // no supplier publishes a structured attribute table.
-  "compatibility", "material", "finish", "coating", "grade", "thread",
-  "length_mm", "dia_mm", "bore_id_mm", "outer_od_mm", "width_mm", "thickness_mm", "shaft_dia_mm",
-];
-
-const cell = (v) => {
-  const s = String(v ?? "");
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-};
-
-function toCsv(rows) {
-  return [CSV_COLS.join(","), ...rows.map((r) => CSV_COLS.map((c) => cell(r[c])).join(","))].join("\n");
-}
-
 /**
  * Split, because the importer's dry run runs in the browser.
  *
@@ -1336,7 +1377,7 @@ const parked = rows.filter((r) => !r.category && r.deferred);
 const unmapped = rows.filter((r) => !r.category && !r.deferred);
 const estimated = rows.filter((r) => r.category && r.weightEstimated);
 const noPrice = rows.filter((r) => !r.price);
-const noOrigin = rows.filter((r) => !r.countryOfOrigin);
+const noOrigin = rows.filter((r) => !r.country_of_origin);
 
 console.log(`
   ${rows.length} rows → tools/feeds/out/${source}.json + ${chunkCount} CSV chunk(s) of ${CHUNK_ROWS}
