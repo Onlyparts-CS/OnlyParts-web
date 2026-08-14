@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { worksWith, substitutes, compatTokens, complementDrawers } from "./product.ts";
+import { worksWith, substitutes, compatTokens, complementDrawers, bulkTier } from "./product.ts";
 import type { Sku } from "./skus.ts";
 
 /**
@@ -181,6 +181,31 @@ const cat = (path: string) => [path.split(".")];
   const bolt = part({ categories: cat("fasteners.screws-by-head.socket-head-cap") });
   const nuts = Array.from({ length: 8 }, () => part({ categories: cat("fasteners.nuts.nyloc-nuts") }));
   assert.equal(worksWith(bolt, [bolt, ...nuts], 4).length, 4, "breadth must not cost depth when there is no breadth");
+}
+
+/* an imported row has one rung and must not crash, nor claim a saving */
+{
+  // The default fixture is exactly the shape a supplier import produces: a
+  // base price and no tiers. Tiles used to read breaks[1] here and threw
+  // "Cannot read properties of undefined (reading 'price')" on every listing.
+  const imported = part({ categories: cat("fasteners.nuts.nyloc-nuts") });
+  assert.equal(imported.breaks.length, 1, "fixture must model the imported shape");
+  assert.equal(bulkTier(imported), null, "one rung is not a price break");
+
+  const seeded = part({
+    categories: cat("fasteners.nuts.nyloc-nuts"),
+    breaks: [
+      { qty: 1, price: 10000 }, { qty: 10, price: 9000 },
+      { qty: 100, price: 7400 }, { qty: 1000, price: 6200 },
+    ],
+  });
+  assert.equal(bulkTier(seeded)?.qty, 100, "the 100 rung is the one buyers recognise");
+
+  const shallow = part({
+    categories: cat("fasteners.nuts.nyloc-nuts"),
+    breaks: [{ qty: 1, price: 10000 }, { qty: 25, price: 8000 }],
+  });
+  assert.equal(bulkTier(shallow)?.qty, 25, "with no 100 rung, take the deepest that exists");
 }
 
 console.log("product.check.ts — ok");

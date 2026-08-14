@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Frame } from "@/components/Frame";
 import { WishButton } from "@/components/WishButton";
 import { inr } from "@/lib/catalog";
+import { bulkTier } from "@/lib/product";
 import type { Sku } from "@/lib/skus";
 
 /**
@@ -17,8 +18,8 @@ import type { Sku } from "@/lib/skus";
  */
 export function ProductTile({ sku }: { sku: Sku }) {
   const stock = stockState(sku.stock);
-  const next = sku.breaks.find((b) => b.qty === 100) ?? sku.breaks[1];
-  const savePct = Math.round((1 - next.price / sku.price) * 100);
+  const next = bulkTier(sku);
+  const savePct = next ? Math.round((1 - next.price / sku.price) * 100) : 0;
   const made = sku.stock === 0;
 
   return (
@@ -54,7 +55,7 @@ export function ProductTile({ sku }: { sku: Sku }) {
             <span className="font-display text-[1.125rem] font-bold tnum text-heading">{inr(sku.price)}</span>
             <span className="text-[0.6875rem] text-faint">/pc</span>
           </div>
-          {savePct > 0 && (
+          {next && savePct > 0 && (
             <div className="mt-0.5 font-mono text-[0.6875rem] text-spot-700 tnum">
               {inr(next.price)} @ {next.qty}+ · save {savePct}%
             </div>
@@ -74,7 +75,7 @@ export function ProductTile({ sku }: { sku: Sku }) {
 /** Table row for the parametric view — FR-24, the DigiKey pattern. */
 export function ProductRow({ sku, cols }: { sku: Sku; cols: { key: string; label: string; unit?: string }[] }) {
   const stock = stockState(sku.stock);
-  const next = sku.breaks.find((b) => b.qty === 100) ?? sku.breaks[1];
+  const next = bulkTier(sku);
 
   return (
     <tr className="border-b border-line transition-colors last:border-0 hover:bg-spot-50">
@@ -99,7 +100,7 @@ export function ProductRow({ sku, cols }: { sku: Sku; cols: { key: string; label
         {inr(sku.price)}
       </td>
       <td className="whitespace-nowrap px-2 py-2 text-right font-mono text-[0.75rem] tnum text-spot-700">
-        {inr(next.price)}
+        {next ? inr(next.price) : "—"}
       </td>
       <td className="whitespace-nowrap py-2 pl-2 pr-3">
         <span className={`stamp ${stock.stampCls}`}>{stock.label}</span>

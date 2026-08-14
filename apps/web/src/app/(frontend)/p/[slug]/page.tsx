@@ -224,9 +224,19 @@ export default async function ProductPage({ params }: Props) {
           <h2 className="mb-3 text-xl">About this part</h2>
           <div className="max-w-3xl text-[0.9375rem] leading-relaxed text-body">
             <p>
-              {sku.title}. Supplied loose — buy a single piece or ten thousand, with
-              price breaks applied automatically in the cart at {sku.breaks.map((b) => b.qty).join(", ")} pieces.
-              Best price {inr(topBreak.price)}/pc at {topBreak.qty.toLocaleString("en-IN")}+.
+              {sku.title}. Supplied loose — buy a single piece or ten thousand.
+              {/* An imported row carries no tiers above qty 1. Promising breaks
+                  it does not have, then quoting the list price as the "best
+                  price at 1+", is a claim the cart would contradict. */}
+              {sku.breaks.length > 1 ? (
+                <>
+                  {" "}Price breaks applied automatically in the cart at{" "}
+                  {sku.breaks.map((b) => b.qty).join(", ")} pieces.
+                  Best price {inr(topBreak.price)}/pc at {topBreak.qty.toLocaleString("en-IN")}+.
+                </>
+              ) : (
+                <> Flat {inr(sku.price)}/pc at every quantity.</>
+              )}
             </p>
             <p className="mt-3">
               Every unit is dimensionally checked against{" "}

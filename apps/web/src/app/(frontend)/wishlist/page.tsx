@@ -67,9 +67,11 @@ export default function WishlistPage() {
                   </div>
                   <div className="shrink-0 text-right">
                     <div className="whitespace-nowrap font-display text-[1.0625rem] font-bold tnum text-heading">{inr(sku.price)}</div>
-                    <div className="whitespace-nowrap font-mono text-[0.6875rem] text-spot-700 tnum">
-                      {inr(sku.breaks.at(-1)!.price)} @ {sku.breaks.at(-1)!.qty}+
-                    </div>
+                    {sku.breaks.length > 1 && (
+                      <div className="whitespace-nowrap font-mono text-[0.6875rem] text-spot-700 tnum">
+                        {inr(sku.breaks.at(-1)!.price)} @ {sku.breaks.at(-1)!.qty}+
+                      </div>
+                    )}
                   </div>
                 </div>
 

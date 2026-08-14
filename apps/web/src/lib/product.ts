@@ -199,6 +199,21 @@ function byEngineeringOrder(key: string) {
 export const tierFor = (sku: Sku, qty: number) =>
   [...sku.breaks].reverse().find((b) => qty >= b.qty) ?? sku.breaks[0];
 
+/**
+ * The break worth advertising, or nothing.
+ *
+ * `breaks` always carries qty 1 and nothing above it is guaranteed: a seeded
+ * fixture has four rungs, an imported supplier row has exactly one. Callers
+ * used to index `breaks[1]` and crashed on the second kind. Prefer the 100
+ * rung buyers recognise, else the deepest that exists, and return null when
+ * the only rung is the base price — a tile must not advertise a saving of
+ * zero, and a page must not promise a break the cart would not apply.
+ */
+export function bulkTier(sku: Sku) {
+  const tiers = sku.breaks.filter((b) => b.qty > 1);
+  return tiers.find((b) => b.qty === 100) ?? tiers.at(-1) ?? null;
+}
+
 /** Every category this SKU is listed in, resolved to nodes. Primary first. */
 export function listings(sku: Sku): { trail: Node[]; primary: boolean }[] {
   return sku.categories
