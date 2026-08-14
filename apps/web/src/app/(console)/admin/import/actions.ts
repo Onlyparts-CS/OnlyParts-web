@@ -14,6 +14,7 @@ import {
   type ImportContext,
   type CatalogueRow,
   type ImportRow,
+  type RowOutcome,
 } from "@/lib/import";
 
 /**
@@ -143,7 +144,43 @@ export async function analyseImport(csv: string): Promise<AnalyseResult> {
   if (!rows.length) return { ok: false, error: "That file has a header row and nothing under it." };
 
   const ctx = await loadContext(payload);
-  return { ok: true, headers, result: dryRun(rows, headers, ctx) };
+  return { ok: true, headers, result: forBrowser(dryRun(rows, headers, ctx)) };
+}
+
+/** How many rows of each kind the review list actually renders. */
+const PREVIEW_ROWS = 200;
+
+/**
+ * The dry run, trimmed to what the browser renders.
+ *
+ * `dryRun` has to stay complete — `commitImport` re-runs it server-side and
+ * writes from it. But sending all of it to the client sent 3,800 outcomes,
+ * each carrying the full 28-column source row and, once product-level fields
+ * started being diffed, six or more change objects apiece. React's Flight
+ * serializer refused it: "Maximum array nesting exceeded."
+ *
+ * The list only ever draws 200 per kind and only ever reads `title` off a
+ * create, so that is what goes over the wire. Error rows are the exception and
+ * are sent whole, because the "download errors as CSV" button rebuilds the
+ * original sheet out of them.
+ *
+ * Counts are computed before the trim, so the numbers stay true.
+ */
+function forBrowser(run: DryRun): DryRun {
+  const kept: Record<string, number> = {};
+  const outcomes = run.outcomes.filter((o) => {
+    if (o.kind === "error") return true;
+    kept[o.kind] = (kept[o.kind] ?? 0) + 1;
+    return kept[o.kind] <= PREVIEW_ROWS;
+  }).map((o): RowOutcome => {
+    // Only the title is drawn on a create; the other 27 columns are dead
+    // weight per row, and an update draws nothing off the row at all.
+    if (o.kind === "create") return { ...o, row: { title: o.row.title ?? "" } };
+    if (o.kind === "update") return { ...o, row: {} };
+    return o;
+  });
+
+  return { ...run, outcomes };
 }
 
 /* ------------------------------------------------------------------ */

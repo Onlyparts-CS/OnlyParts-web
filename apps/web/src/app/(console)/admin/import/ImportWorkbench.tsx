@@ -193,7 +193,12 @@ export function ImportWorkbench({ projectSlugs }: { projectSlugs: string[] }) {
         <div className="mt-6">
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <span className="font-mono text-[0.8125rem] text-heading">{filename}</span>
-            <span className="font-mono text-[0.75rem] text-faint">{result.outcomes.length} rows</span>
+            {/* The true total. `outcomes` is trimmed to what this list draws — see
+                `forBrowser` in actions.ts — so its length is a preview size,
+                not a row count, and showing it would under-report the sheet. */}
+            <span className="font-mono text-[0.75rem] text-faint">
+              {(result.create + result.update + result.unchanged + result.errors).toLocaleString("en-IN")} rows
+            </span>
             <button onClick={reset} className="ml-auto btn btn-ghost btn-sm">Choose a different file</button>
           </div>
 
