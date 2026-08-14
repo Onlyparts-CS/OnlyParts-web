@@ -160,7 +160,19 @@ export type CommitResult =
     }
   | { ok: false; error: string };
 
-export async function commitImport(csv: string, filename = "import.csv"): Promise<CommitResult> {
+export async function commitImport(
+  csv: string,
+  filename = "import.csv",
+  /**
+   * The operator has seen the bulk-change count and accepted it.
+   *
+   * Re-checked here rather than trusted from the preview: this is a public
+   * POST endpoint, so "the browser said it was fine" is not a check. What it
+   * is not, is a privilege boundary — anyone reaching this already has
+   * catalogue write access. It is a deliberate second look at one number.
+   */
+  confirmBulkChange = false,
+): Promise<CommitResult> {
   const { payload, user } = await session();
   if (!user) return { ok: false, error: "Your session expired — sign in again." };
 
@@ -171,6 +183,15 @@ export async function commitImport(csv: string, filename = "import.csv"): Promis
   // The same guard rails that stop the preview stop the write. They are not a
   // UI courtesy — a run that rewrites half the catalogue is a broken mapping.
   if (run.blockers.length) return { ok: false, error: run.blockers[0] };
+
+  if (run.bulkChange && !confirmBulkChange) {
+    const { update, live, pct } = run.bulkChange;
+    return {
+      ok: false,
+      error: `This would modify ${update.toLocaleString("en-IN")} of ${live.toLocaleString("en-IN")} rows (${pct}%). `
+        + `Tick the confirmation to proceed, or check your column mapping first.`,
+    };
+  }
 
   const bySku = new Map(ctx.existing.map((e) => [e.sku.toUpperCase(), e]));
   const warehouse = await defaultWarehouse(payload);

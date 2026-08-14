@@ -59,6 +59,16 @@ export type DryRun = {
   errors: number;
   /** guard rails that stop the run regardless of row-level validity */
   blockers: string[];
+  /**
+   * A run large enough to look like a mis-mapped sheet, when it might not be.
+   *
+   * Separate from `blockers` because it is the one guard with a legitimate
+   * reason to be passed: backfilling a column that did not exist yesterday
+   * touches everything, and so does a genuine repricing. A rail that can never
+   * be released is a rail an operator gets past by deleting the catalogue and
+   * re-importing, which is the outcome it was put there to prevent.
+   */
+  bulkChange: { update: number; live: number; pct: number } | null;
   warnings: string[];
 };
 
@@ -356,12 +366,9 @@ export function dryRun(rows: ImportRow[], headers: string[], ctx: ImportContext)
   // Guard rail from docs/14 §3.3 — a run that rewrites most of the catalogue is
   // almost always a broken mapping, not a real repricing.
   const live = ctx.existing.length;
-  if (update > live * 0.5 && live > 0) {
-    blockers.push(
-      `This would modify ${update.toLocaleString("en-IN")} of ${live.toLocaleString("en-IN")} products (${Math.round((update / live) * 100)}%). ` +
-      `Runs over 50% are blocked — check your column mapping.`,
-    );
-  }
+  const bulkChange = update > live * 0.5 && live > 0
+    ? { update, live, pct: Math.round((update / live) * 100) }
+    : null;
   if (count("error") > rows.length * 0.2 && rows.length > 10) {
     warnings.push(`${count("error")} of ${rows.length} rows failed validation — the column mapping may be wrong.`);
   }
@@ -395,6 +402,7 @@ export function dryRun(rows: ImportRow[], headers: string[], ctx: ImportContext)
     unchanged: count("unchanged"),
     errors: count("error"),
     blockers,
+    bulkChange,
     warnings,
   };
 }

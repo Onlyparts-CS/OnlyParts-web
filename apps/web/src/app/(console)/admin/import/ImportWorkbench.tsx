@@ -26,6 +26,9 @@ export function ImportWorkbench({ projectSlugs }: { projectSlugs: string[] }) {
   const [csv, setCsv] = useState("");
   const [headers, setHeaders] = useState<string[]>([]);
   const [result, setResult] = useState<DryRun | null>(null);
+  // Reset with every new analysis: a tick that survives a fresh sheet is a
+  // confirmation of a count the operator never saw.
+  const [confirmBulk, setConfirmBulk] = useState(false);
   const [commit, setCommit] = useState<CommitResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<RowOutcome["kind"] | "all">("all");
@@ -42,6 +45,7 @@ export function ImportWorkbench({ projectSlugs }: { projectSlugs: string[] }) {
       const res = await analyseImport(text);
       if (!res.ok) { setError(res.error); return; }
       setHeaders(res.headers);
+      setConfirmBulk(false);
       setResult(res.result);
       setPhase("review");
     });
@@ -52,7 +56,7 @@ export function ImportWorkbench({ projectSlugs }: { projectSlugs: string[] }) {
     startTransition(async () => {
       // The filename rides along so the undo record is identifiable later —
       // "import.csv" three times in a history list helps nobody.
-      const res = await commitImport(csv, filename);
+      const res = await commitImport(csv, filename, confirmBulk);
       if (!res.ok) { setError(res.error); return; }
       setCommit(res);
       setPhase("done");
@@ -212,6 +216,33 @@ export function ImportWorkbench({ projectSlugs }: { projectSlugs: string[] }) {
             </p>
           ))}
 
+          {/*
+            Overridable, unlike the blockers above it. A sheet that touches most
+            of the catalogue is usually a mis-mapped column and occasionally a
+            real backfill, and only the person who made the sheet can tell which.
+            Refusing outright taught operators to wipe and re-import instead.
+          */}
+          {result.bulkChange && (
+            <div className="mt-3 rounded-sm border border-warning/30 bg-warning-bg px-4 py-3">
+              <p className="text-[0.875rem] text-warning">
+                This modifies {result.bulkChange.update.toLocaleString("en-IN")} of{" "}
+                {result.bulkChange.live.toLocaleString("en-IN")} rows ({result.bulkChange.pct}%).
+                A run this large is usually a column mapped to the wrong field — check the
+                sample rows above before you accept it.
+              </p>
+              <label htmlFor="confirm-bulk" className="mt-2 flex cursor-pointer items-center gap-2 text-[0.875rem] text-heading">
+                <input
+                  id="confirm-bulk"
+                  type="checkbox"
+                  checked={confirmBulk}
+                  onChange={(e) => setConfirmBulk(e.target.checked)}
+                  className="size-4 shrink-0 accent-[var(--color-spot-600)]"
+                />
+                I have checked the mapping — apply all {result.bulkChange.update.toLocaleString("en-IN")} changes.
+              </label>
+            </div>
+          )}
+
           <div className="mt-5 flex flex-wrap items-center gap-2">
             <span className="text-[0.75rem] text-faint">Show:</span>
             {(["all", "create", "update", "unchanged", "error"] as const).map((k) => (
@@ -243,7 +274,9 @@ export function ImportWorkbench({ projectSlugs }: { projectSlugs: string[] }) {
               <p className="text-[0.875rem] text-heading">
                 {result.blockers.length > 0
                   ? "Fix the blocker above before committing."
-                  : `Commit will create ${result.create}, update ${result.update} and skip ${result.errors} rows.`}
+                  : result.bulkChange && !confirmBulk
+                    ? "Confirm the bulk change above before committing."
+                    : `Commit will create ${result.create}, update ${result.update} and skip ${result.errors} rows.`}
               </p>
               <p className="mt-0.5 text-[0.75rem] text-faint">
                 Stock changes are written as counted movements, so the ledger still
@@ -251,7 +284,12 @@ export function ImportWorkbench({ projectSlugs }: { projectSlugs: string[] }) {
               </p>
             </div>
             <button
-              disabled={pending || result.blockers.length > 0 || result.create + result.update === 0}
+              disabled={
+                pending
+                || result.blockers.length > 0
+                || (!!result.bulkChange && !confirmBulk)
+                || result.create + result.update === 0
+              }
               onClick={runCommit}
               className="btn btn-primary disabled:opacity-50"
             >

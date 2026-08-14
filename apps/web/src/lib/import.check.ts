@@ -310,4 +310,37 @@ const errs = (extra: Record<string, string> = {}) => {
   assert.deepEqual(changed({}), [], "an unchanged row is still unchanged");
 }
 
+/*
+  The bulk-change rail is a warning you must accept, not a wall.
+
+  It was a hard blocker, and the only way past a hard blocker is to delete the
+  catalogue and import fresh — which is precisely the data loss it exists to
+  prevent. Backfilling a column that did not exist yesterday touches every row
+  and is completely legitimate.
+*/
+{
+  const many = Array.from({ length: 10 }, (_, i) => ({
+    sku: `OP-B${i}`, variantId: i, productId: i, title: `part ${i}`,
+    price: 10000, stock: 5, projects: [], attrs: {},
+  }));
+  const ctx3 = { ...ctx, existing: many };
+
+  const sheet = (n: number) => {
+    const headers = [...Object.keys(base), "mrp"];
+    const lines = Array.from({ length: n }, (_, i) =>
+      headers.map((h) => (h === "sku" ? `OP-B${i}` : h === "mrp" ? "999" : base[h])).join(","));
+    const parsed = parseCsv(`${headers.join(",")}\n${lines.join("\n")}\n`);
+    return dryRun(parsed.rows, parsed.headers, ctx3);
+  };
+
+  const big = sheet(9);
+  assert.deepEqual(big.blockers, [], "a large run must not be a hard blocker");
+  assert.ok(big.bulkChange, "but it must be flagged");
+  assert.equal(big.bulkChange?.update, 9);
+  assert.equal(big.bulkChange?.live, 10);
+  assert.equal(big.bulkChange?.pct, 90);
+
+  assert.equal(sheet(4).bulkChange, null, "under half the catalogue is unremarkable");
+}
+
 console.log("import.check.ts — Rule 6(1) assertions passed");
