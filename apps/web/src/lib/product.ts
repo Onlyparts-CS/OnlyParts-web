@@ -433,10 +433,22 @@ export function worksWith(sku: Sku, pool: Sku[], limit = 6): Complement[] {
     order, so a match we can prove has already claimed its place before any of
     these are considered. What these rows do not get is the accent — see
     `proven` on the return type.
+
+    One from each leaf before a second from any, because the shelf is a kit and
+    a kit spans the build. Draining each leaf in turn instead put seven motor
+    drivers under a NEMA 17 and no coupler, no bracket and no power supply —
+    `dc-motor-drivers` simply had enough stock to fill every slot before
+    `shaft-couplers` was reached. Breadth is the whole point of the shelf; a
+    seventh driver is a substitute wearing a complement's heading.
   */
-  for (const p of pairings) {
-    for (const s of candidates) {
-      if (s.categories[0].at(-1) === p.leaf) take(s, p.why, false);
+  const queues = pairings.map((p) => ({
+    why: p.why,
+    rest: candidates.filter((s) => s.categories[0].at(-1) === p.leaf),
+  }));
+  for (let round = 0; picked.size < limit && queues.some((q) => q.rest.length > round); round++) {
+    for (const q of queues) {
+      const s = q.rest[round];
+      if (s) take(s, q.why, false);
     }
   }
 

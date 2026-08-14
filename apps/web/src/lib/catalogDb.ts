@@ -62,6 +62,40 @@ const GLYPH_BY_DRAWER: Record<string, GlyphKey> = Object.fromEntries(
   CATEGORIES.map((c) => [c.slug, c.glyph]),
 );
 
+/**
+ * A drawer is too coarse to draw with.
+ *
+ * `motors` covers steppers, drivers, couplers and brackets, and keying the
+ * plate off the drawer alone gave all four the same rotor — a "Works with this
+ * part" shelf where the driver, the coupler and the mounting bracket were
+ * seven copies of one picture. The leaf is what the eye is actually being
+ * asked to tell apart.
+ *
+ * Keyword rules rather than a table of 566 leaves: the taxonomy grows, and a
+ * map keyed by leaf slug is a map somebody has to remember to extend. A leaf
+ * that matches nothing falls back to its drawer, which is the old behaviour.
+ */
+const GLYPH_BY_LEAF: [RegExp, GlyphKey][] = [
+  [/driver|controller|board|module|shield|sensor|relay|ic$|mcu|logic|display|converter/, "chip"],
+  [/coupler|pulley|gear|bearing-|spindle|rotor|servo|motor$/, "rotor"],
+  [/bracket|mount|extrusion|rail|profile|plate|frame|chassis|standoff/, "extrusion"],
+  [/batter|cell|lipo|li-ion|18650|power-bank|charger/, "cell"],
+  [/smps|psu|power-suppl|transformer|regulator/, "chip"],
+  [/nozzle|hotend|extruder|filament|heatbed|bowden/, "nozzle"],
+  [/prop|blade|rotor-arm|esc|flight/, "prop"],
+  [/magnet/, "magnet"],
+  [/screw|bolt|nut|washer|rivet|anchor|insert/, "hex"],
+  [/bearing/, "bearing"],
+  [/wrench|plier|spanner|driver-set|tool|cutter|file$|clamp/, "wrench"],
+];
+
+const glyphFor = (path: string[]): GlyphKey => {
+  const leaf = path.at(-1) ?? "";
+  return GLYPH_BY_LEAF.find(([re]) => re.test(leaf))?.[1]
+    ?? GLYPH_BY_DRAWER[path[0]]
+    ?? "hex";
+};
+
 const payloadOnce = () => getPayload({ config });
 
 /* ------------------------------------------------------------------ */
@@ -217,7 +251,7 @@ function toSku(v: VariantRow, ctx: Ctx): Sku | null {
     breaks,
     stock: ctx.stockByVariant.get(String(v.id)) ?? 0,
     dispatchHours: 24,
-    glyph: GLYPH_BY_DRAWER[categories[0][0]] ?? "hex",
+    glyph: glyphFor(categories[0]),
     attrs,
     categories,
     projects: ctx.buildsByProduct.get(String(product.id)) ?? [],

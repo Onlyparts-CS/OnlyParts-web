@@ -155,4 +155,32 @@ const cat = (path: string) => [path.split(".")];
   assert.deepEqual(substitutes(a, [a, b]).map((s) => s.sku), [b.sku]);
 }
 
+/* the shelf spans the build rather than draining one leaf */
+{
+  const motor = part({ categories: cat("motors.stepper-motors.nema-17") });
+  // dc-motor-drivers is the first pairing and has enough stock to fill every
+  // slot on its own — which is exactly what it used to do.
+  const drivers = Array.from({ length: 20 }, () =>
+    part({ categories: cat("motors.motor-drivers.dc-motor-drivers") }));
+  const coupler = part({ categories: cat("motors.motor-accessories.shaft-couplers") });
+  const bracket = part({ categories: cat("motors.motor-accessories.mounts-brackets") });
+  const psu = part({ categories: cat("electronic-components.power-supplies.smps-modules") });
+
+  const out = worksWith(motor, [motor, ...drivers, coupler, bracket, psu], 6);
+  const leaves = new Set(out.map((c) => c.sku.categories[0].at(-1)));
+
+  assert.ok(leaves.has("shaft-couplers"), "a coupler must survive twenty drivers");
+  assert.ok(leaves.has("mounts-brackets"), "so must a bracket");
+  assert.ok(leaves.has("smps-modules"), "and the power supply");
+  assert.ok(leaves.size >= 4, `a kit spans leaves, got ${[...leaves].join(", ")}`);
+  assert.equal(out.length, 6, "and still fills the shelf");
+}
+
+/* a leaf with only one complement still fills up from it */
+{
+  const bolt = part({ categories: cat("fasteners.screws-by-head.socket-head-cap") });
+  const nuts = Array.from({ length: 8 }, () => part({ categories: cat("fasteners.nuts.nyloc-nuts") }));
+  assert.equal(worksWith(bolt, [bolt, ...nuts], 4).length, 4, "breadth must not cost depth when there is no breadth");
+}
+
 console.log("product.check.ts — ok");
