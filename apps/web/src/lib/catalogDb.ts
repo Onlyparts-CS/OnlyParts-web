@@ -5,6 +5,7 @@ import config from "@payload-config";
 import type { Sku, PriceBreak } from "./skus";
 import type { GlyphKey } from "./types";
 import { CATEGORIES } from "./catalog";
+import { imageUrl } from "./import";
 
 /**
  * The catalogue, read from Postgres.
@@ -239,13 +240,28 @@ function toSku(v: VariantRow, ctx: Ctx): Sku | null {
   // the gallery, and the PDP maps role onto its four named slots.
   const shots = ctx.mediaByProduct.get(String(product.id)) ?? [];
   const hero = shots.find((m) => m.role === "hero") ?? shots[0];
+  const sourceImage = imageUrl(
+    typeof product.sourceImageUrl === "string" ? product.sourceImageUrl : undefined,
+  );
 
   return {
     sku: v.sku,
     slug: v.sku.toLowerCase(),
     title,
     productId: Number(product.id),
-    image: hero ? { url: hero.url, alt: hero.alt } : undefined,
+    /*
+      An upload we own beats a hotlink beats the drawn plate.
+
+      `media` is empty for every imported row and will be for a while, so
+      without the middle term the whole catalogue renders as one of thirteen
+      screened plates and a shelf of six complements looks like the same part
+      six times.
+    */
+    image: hero
+      ? { url: hero.url, alt: hero.alt }
+      : sourceImage
+        ? { url: sourceImage, alt: title }
+        : undefined,
     images: shots.length ? shots : undefined,
     price: v.basePrice,
     breaks,

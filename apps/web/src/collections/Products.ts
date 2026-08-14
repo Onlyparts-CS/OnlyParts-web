@@ -339,6 +339,29 @@ export const Products: CollectionConfig = {
     },
 
     {
+      /*
+        The supplier's own photograph, hotlinked rather than mirrored.
+
+        `media` above is the real answer — uploads we own, served same-origin,
+        halftone-screened. But 119,862 of 119,864 harvested rows already carry
+        a usable image URL and mirroring them is a bucket, a fetch pipeline and
+        a licence conversation. This field lets the catalogue have pictures
+        today and be migrated later without touching the storefront: anything
+        in `media` wins, this is only consulted when there is nothing there.
+
+        Not a free-text URL in practice — `imageUrl()` in `lib/import.ts`
+        rejects anything off `IMAGE_HOSTS`, and `next.config.ts` allowlists the
+        same pair, so a value written by any other route still cannot be
+        fetched by the optimiser.
+      */
+      name: "sourceImageUrl",
+      type: "text",
+      admin: {
+        description:
+          "Supplier photograph, hotlinked. Anything in Media wins over this; empty falls back to the drawn plate.",
+      },
+    },
+    {
       name: "media",
       type: "array",
       admin: { description: "Everything here is halftone-screened before display." },

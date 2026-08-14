@@ -3,6 +3,24 @@ import { withPayload } from "@payloadcms/next/withPayload";
 
 const nextConfig: NextConfig = {
   /*
+    Supplier photographs, hotlinked until they are mirrored.
+
+    The optimiser proxies these through `/_next/image`, so the browser only
+    ever sees a same-origin URL — which is what the halftone canvas needs, and
+    why hotlinking works here at all without tainting it.
+
+    Two hosts, exactly. `remotePatterns` is a server-side fetch allowlist, not
+    a formality: without it, an `image` column in an uploaded CSV would decide
+    what this server requests. `imageUrl()` in `lib/import.ts` rejects the same
+    set on the way in, so it takes both to be wrong.
+  */
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "cdn.shopify.com" },
+      { protocol: "https", hostname: "robu-prod-media.s3.ap-south-1.amazonaws.com" },
+    ],
+  },
+  /*
     `experimental.viewTransition` is deliberately NOT on.
 
     The plan was a shared-element morph: the halftone plate on a catalogue tile

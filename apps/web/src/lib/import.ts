@@ -81,6 +81,10 @@ export const IMPORT_FIELDS = [
   // runs on. Never inferred from the title: a listing that says "Compatible
   // with Arduino" in prose has not declared anything.
   "compatibility",
+  // The supplier's photograph, hotlinked rather than mirrored. Validated
+  // against `IMAGE_HOSTS` on the way in — an image URL from a CSV is a URL the
+  // Next optimiser will fetch server-side, so it is a trust boundary.
+  "image",
 ] as const;
 
 /**
@@ -100,7 +104,31 @@ export const rule6Complete = (row: ImportRow) =>
 const CORE_FIELDS = [
   "sku", "title", "price", "stock", "hsn", "gst_rate", "weight_g", "category", "projects",
   "country_of_origin", "mrp", "net_quantity", "importer_name", "importer_address",
+  "image",
 ];
+
+/**
+ * Hosts an imported image may come from.
+ *
+ * `next/image` fetches whatever it is pointed at, from the server, before the
+ * browser sees it — so an unrestricted `image` column is a CSV that can make
+ * the app issue arbitrary outbound requests. These two are the only hosts the
+ * harvested feeds actually use, and `next.config.ts` allowlists the same pair
+ * so a URL that slipped past here still could not be optimised.
+ */
+export const IMAGE_HOSTS = ["cdn.shopify.com", "robu-prod-media.s3.ap-south-1.amazonaws.com"];
+
+/** The image on a row, or "" when it is absent or not from a host we allow. */
+export function imageUrl(raw: string | undefined): string {
+  const v = (raw ?? "").trim();
+  if (!v) return "";
+  try {
+    const u = new URL(v);
+    return u.protocol === "https:" && IMAGE_HOSTS.includes(u.host) ? v : "";
+  } catch {
+    return "";
+  }
+}
 
 /**
  * Countries the `products.countryOfOrigin` select accepts.

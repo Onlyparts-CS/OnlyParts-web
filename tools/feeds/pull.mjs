@@ -516,6 +516,11 @@ function originFrom(specs) {
 const CSV_COLS = [
   "sku", "title", "price", "stock", "hsn", "gst_rate", "weight_g", "category", "projects",
   "country_of_origin", "mrp", "net_quantity", "importer_name", "importer_address",
+  // The supplier's own photograph, hotlinked. 119,862 of 119,864 rows carry
+  // one and they sit on exactly two hosts, so the importer can allowlist it.
+  // Mirroring these to our own bucket is the production answer; see the note
+  // on `sourceImageUrl` in Products.ts.
+  "image",
   // Typed spec columns, populated only where `typedSpecs` could prove the
   // mapping. Mostly blank across the whole feed, and that is the honest state:
   // no supplier publishes a structured attribute table.

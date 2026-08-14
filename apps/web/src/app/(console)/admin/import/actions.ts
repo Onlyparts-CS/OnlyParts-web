@@ -8,6 +8,7 @@ import {
   dryRun,
   specsOf,
   rule6Complete,
+  imageUrl,
   parseProjects,
   type DryRun,
   type ImportContext,
@@ -411,6 +412,8 @@ async function createRow(
       netQuantity: row.net_quantity?.trim() || null,
       importerName: row.importer_name?.trim() || null,
       importerAddress: row.importer_address?.trim() || null,
+      // Rejected unless it is https on a host we allowlist — see `imageUrl`.
+      sourceImageUrl: imageUrl(row.image) || null,
     } as never,
   });
 

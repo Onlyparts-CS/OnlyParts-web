@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { parseCsv, dryRun, ORIGINS, IMPORT_FIELDS, specsOf, rule6Complete, RULE6_GATED } from "./import.ts";
+import { parseCsv, dryRun, ORIGINS, IMPORT_FIELDS, specsOf, rule6Complete, RULE6_GATED, imageUrl } from "./import.ts";
 import { SCHEMAS, UNIVERSAL } from "./taxonomy.ts";
 
 /**
@@ -239,6 +239,36 @@ const errs = (extra: Record<string, string> = {}) => {
     `these import columns resolve to no attribute definition and would be silently dropped: ${orphans.join(", ")}`,
   );
   assert.ok(specKeys.includes("compatibility"), "compatibility must be a spec, not a core field");
+}
+
+/*
+  The image column is a trust boundary, not a convenience.
+
+  `next/image` fetches whatever it is pointed at, server-side, before the
+  browser is involved. An unvalidated `image` cell in an uploaded CSV is a
+  request this server makes on a stranger's behalf.
+*/
+{
+  const ok = "https://cdn.shopify.com/s/files/1/x/screw.jpg?v=1";
+  assert.equal(imageUrl(ok), ok, "an allowlisted host passes through unchanged");
+  assert.equal(
+    imageUrl("https://robu-prod-media.s3.ap-south-1.amazonaws.com/a.png"),
+    "https://robu-prod-media.s3.ap-south-1.amazonaws.com/a.png",
+  );
+
+  for (const bad of [
+    "http://cdn.shopify.com/a.jpg",              // downgraded to http
+    "https://evil.example.com/a.jpg",            // host not on the list
+    "https://cdn.shopify.com.evil.com/a.jpg",    // suffix that looks like the list
+    "file:///etc/passwd",                        // not even http
+    "http://169.254.169.254/latest/meta-data/",  // link-local metadata
+    "//cdn.shopify.com/a.jpg",                   // protocol-relative, no host to parse
+    "not a url",
+    "",
+    undefined,
+  ]) {
+    assert.equal(imageUrl(bad as string), "", `must reject ${JSON.stringify(bad)}`);
+  }
 }
 
 console.log("import.check.ts — Rule 6(1) assertions passed");
