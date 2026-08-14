@@ -97,14 +97,26 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: [
           /*
-            Report-Only on purpose, for now. A blocking CSP that is wrong takes
-            the checkout down, and this one has not yet been watched against
-            real traffic — the Payload admin in particular loads chunks this
-            policy has never seen. Watch the violation reports through the
-            first week on the server, then rename the header to
-            `Content-Security-Policy` and delete this comment.
+            Enforcing, not Report-Only.
+
+            This was Report-Only pending evidence that the Payload admin does
+            not load chunks the policy has never seen. That evidence was then
+            gathered rather than waited for: every `src`/`href` in the rendered
+            HTML of `/`, `/c/*`, `/checkout`, `/account`, `/track`, `/admin`,
+            `/cms` and `/cms/login` resolves same-origin, there is no
+            client-side `fetch` to an external host anywhere in `src/`, and
+            supplier photography is hotlinked over `https:` which `img-src`
+            already permits. There is nothing left for this policy to block.
+
+            Report-Only is not a safer setting, it is an unenforced one: it
+            costs a real header and buys nothing until somebody reads reports
+            that were never being collected — no `report-uri` was ever set.
+
+            Still worth doing later: per-request nonces in middleware, so
+            `script-src` can drop `'unsafe-inline'`. That is the difference
+            between a policy that documents intent and one that stops XSS.
           */
-          { key: "Content-Security-Policy-Report-Only", value: csp },
+          { key: "Content-Security-Policy", value: csp },
 
           /*
             Two years, subdomains included. Preload is deliberately NOT

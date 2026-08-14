@@ -4,7 +4,9 @@ import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { errorCsv, SAMPLE_CSV, IMPORT_FIELDS, type DryRun, type RowOutcome } from "@/lib/import";
-import { analyseImport, commitImport, type CommitResult } from "./actions";
+// Types only: the two actions are now reached through the route handler, so
+// importing them as values would ship action references this file never calls.
+import type { AnalyseResult, CommitResult } from "./actions";
 import { UploadIcon, CheckIcon } from "@/components/Icons";
 
 type Phase = "upload" | "review" | "done";
@@ -38,12 +40,30 @@ export function ImportWorkbench({ projectSlugs }: { projectSlugs: string[] }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
+  /*
+    The sheet goes over `fetch`, not as a Server Action argument.
+
+    React's Flight decoder charges a string's own length against a
+    1,000,000-slot budget when it sits in an argument list, and this CSV is
+    1.15 million characters — so every import died on "Maximum array nesting
+    exceeded" before reading a row. See the route handler for the citation.
+    The route calls the very same two functions, which do their own auth.
+  */
+  const post = async <T,>(text: string, query: string): Promise<T> => {
+    const res = await fetch(`/admin/import/upload${query}`, {
+      method: "POST",
+      headers: { "Content-Type": "text/csv" },
+      body: text,
+    });
+    return (await res.json()) as T;
+  };
+
   const analyse = (text: string, name: string) => {
     setError(null);
     setFilename(name);
     setCsv(text);
     startTransition(async () => {
-      const res = await analyseImport(text);
+      const res = await post<AnalyseResult>(text, "?mode=analyse");
       if (!res.ok) { setError(res.error); return; }
       setHeaders(res.headers);
       setConfirmBulk(false);
@@ -57,7 +77,8 @@ export function ImportWorkbench({ projectSlugs }: { projectSlugs: string[] }) {
     startTransition(async () => {
       // The filename rides along so the undo record is identifiable later —
       // "import.csv" three times in a history list helps nobody.
-      const res = await commitImport(csv, filename, confirmBulk);
+      const q = `?mode=commit&filename=${encodeURIComponent(filename)}${confirmBulk ? "&confirm=1" : ""}`;
+      const res = await post<CommitResult>(csv, q);
       if (!res.ok) { setError(res.error); return; }
       setCommit(res);
       setPhase("done");

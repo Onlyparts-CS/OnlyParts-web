@@ -18,7 +18,23 @@ import type { StaffRole } from "./adminAuth";
  */
 export async function actionStaff(...roles: StaffRole[]) {
   const payload = await getPayload({ config });
-  const { user } = await payload.auth({ headers: await nextHeaders() });
+
+  /*
+    Fail closed, like `currentStaff` already did.
+
+    `payload.auth` throws Forbidden rather than returning an empty user for
+    some malformed or expired credentials. Uncaught, that leaves the caller
+    propagating a framework error page instead of its own refusal — which is
+    how an unauthenticated upload to the import route answered 404 with an
+    HTML body rather than 403 with a reason. A thrown auth check and a failed
+    one mean the same thing here, so they should read the same.
+  */
+  let user: Awaited<ReturnType<typeof payload.auth>>["user"] = null;
+  try {
+    ({ user } = await payload.auth({ headers: await nextHeaders() }));
+  } catch {
+    return { payload, user: null };
+  }
 
   // `collection` matters: a customer session must never satisfy a staff check.
   if (!user || user.collection !== "users") return { payload, user: null };

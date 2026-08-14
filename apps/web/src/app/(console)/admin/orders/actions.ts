@@ -111,5 +111,11 @@ export async function addOrderNote(number: string, text: string): Promise<OrderA
 
 /** Where this order may legally go, for the buttons. The collection re-checks. */
 export async function nextStates(from: OrderStatus): Promise<readonly OrderStatus[]> {
+  // Guarded despite writing nothing: a `"use server"` export is a POST endpoint
+  // anyone can call, and this one hands out the fulfilment state machine — a
+  // free map of the internal workflow for whoever is deciding what to probe.
+  const { user } = await session();
+  if (!user) return [];
+
   return ORDER_TRANSITIONS[from] ?? [];
 }
