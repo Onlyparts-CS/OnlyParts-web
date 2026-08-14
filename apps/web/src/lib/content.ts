@@ -83,7 +83,6 @@ export const POLICIES: Policy[] = [
         body: [
           "Refunds go back to the original payment method, always. We will not push you towards store credit, and store credit is never the only option offered.",
           "Refunds are initiated within 2 working days of the return being received, and typically reach your account within 5–7 working days depending on your bank.",
-          "For COD orders we refund by bank transfer to an account you nominate.",
         ],
       },
       {
@@ -520,7 +519,7 @@ export const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Which payment methods do you accept?",
-    a: "UPI, credit and debit cards, netbanking, and cash on delivery under ₹20,000. Card details are handled entirely by our payment gateway and never reach our servers.",
+    a: "UPI, credit and debit cards, and netbanking. We do not offer cash on delivery — every order is paid online before it ships. Card details are handled entirely by our payment gateway and never reach our servers.",
   },
   {
     q: "Do you ship across all of India?",

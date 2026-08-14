@@ -1,5 +1,5 @@
 import { allSkus, type Sku } from "./skus";
-import { resolve, type Node } from "./taxonomy";
+import { resolve, allPaths, type Node } from "./taxonomy";
 import { PROJECTS } from "./catalog";
 import type { GlyphKey } from "./types";
 
@@ -41,6 +41,9 @@ export const SPEC_GROUPS: { title: string; keys: string[] }[] = [
   { title: "Material & finish", keys: ["material", "finish", "grade", "coating"] },
   { title: "Mechanical & electrical", keys: ["drive_type", "head_type", "seal_type", "max_rpm", "pull_force_kg", "max_temp_c", "torque_ncm", "step_angle", "voltage_v", "current_a", "phases", "shape"] },
   { title: "Standards", keys: ["standard", "precision_class", "nema_size"] },
+  // Supplier-declared, and the same field `worksWith` pairs on — so what the
+  // spec table states and what the shelf below it claims cannot disagree.
+  { title: "Compatibility", keys: ["compatibility"] },
 ];
 
 export const SPEC_LABELS: Record<string, { label: string; unit?: string }> = {
@@ -75,6 +78,7 @@ export const SPEC_LABELS: Record<string, { label: string; unit?: string }> = {
   standard: { label: "Standard" },
   nema_size: { label: "Frame size", unit: "NEMA" },
   bearing_code: { label: "Bearing code" },
+  compatibility: { label: "Declared for" },
 };
 
 /** GST HSN codes by top-level category — required on every invoice. */
@@ -221,27 +225,222 @@ export function substitutes(sku: Sku, pool: Sku[], limit = 4): Sku[] {
     .slice(0, limit);
 }
 
-/** "Frequently bought with" — hand-plausible pairings across the tree. */
-export function boughtWith(sku: Sku, pool: Sku[], limit = 4): Sku[] {
-  const leaf = sku.categories[0].at(-1)!;
-  const all = pool;
-  const thread = sku.attrs.thread;
+/* ============================================================
+   Complements — "Works with this part"
 
-  if (["socket-head-cap", "button-head", "countersunk-csk", "pan-head"].includes(leaf)) {
-    // same thread in other head styles, plus a bearing that fits nothing — no:
-    // keep it honest, pair with the same thread in other heads and lengths
-    return all
-      .filter((s) => s.sku !== sku.sku && s.stock > 0 && s.attrs.thread === thread)
-      .filter((s) => s.categories[0].at(-1) !== leaf || s.attrs.length_mm !== sku.attrs.length_mm)
-      .slice(0, limit);
+   This replaces `boughtWith`, which could not express a complement. Every one
+   of its branches filtered for a *matching* attribute — same thread, same bore
+   — and its fallback was "anything in stock in the same L1 drawer". So a NEMA
+   17 motor's pairings were other motors, never the driver it needs. It also
+   ran under the heading "Frequently bought with", which claims a purchase
+   pattern that nothing here has measured.
+
+   What replaces it is a claim we can stand behind: these parts fit together,
+   and the page says on what. Three sources, strongest first:
+
+     1. Fit  — a complementary leaf where the dimension that has to agree
+               actually agrees (an M4 bolt and an M4 nyloc nut).
+     2. Compatibility — both parts declare the same platform token. This is a
+               supplier-stated fact carried through from the feed, not a guess.
+     3. Pairing — the complementary leaf with no dimension to check (a LiPo
+               pack and a balance charger).
+
+   Nothing here is derived from traffic or orders, because there is neither.
+   ============================================================ */
+
+/**
+ * Leaf → the leaves that complete it, each with the reason shown on the card,
+ * and the attribute that must agree for the pair to actually fit (if any).
+ *
+ * Keyed on the leaf slug, which is the last segment of the primary category
+ * path. Entries are engineering facts, so they are hand-written and stay that
+ * way — deriving them from the tree is what put "Build a Drone" on an M2.5
+ * screw, and the same mistake is available here.
+ */
+type Pairing = { leaf: string; why: string; fit?: string };
+
+const COMPLEMENTS: Record<string, Pairing[]> = {
+  /* fasteners — the dimension that must agree is the thread */
+  "socket-head-cap":  [{ leaf: "nyloc-nuts", why: "Locks this bolt", fit: "thread" }, { leaf: "hex-nuts", why: "Takes this thread", fit: "thread" }, { leaf: "flat-plain", why: "Spreads the load", fit: "thread" }, { leaf: "brass-heat-set", why: "Threads to match", fit: "thread" }],
+  "button-head":      [{ leaf: "nyloc-nuts", why: "Locks this bolt", fit: "thread" }, { leaf: "hex-nuts", why: "Takes this thread", fit: "thread" }, { leaf: "flat-plain", why: "Spreads the load", fit: "thread" }],
+  "countersunk-csk":  [{ leaf: "hex-nuts", why: "Takes this thread", fit: "thread" }, { leaf: "brass-heat-set", why: "Threads to match", fit: "thread" }],
+  "pan-head":         [{ leaf: "hex-nuts", why: "Takes this thread", fit: "thread" }, { leaf: "flat-plain", why: "Spreads the load", fit: "thread" }],
+  "cheese-head":      [{ leaf: "hex-nuts", why: "Takes this thread", fit: "thread" }, { leaf: "flat-plain", why: "Spreads the load", fit: "thread" }],
+  "hex-bolts":        [{ leaf: "hex-nuts", why: "Takes this thread", fit: "thread" }, { leaf: "flange-nuts", why: "Takes this thread", fit: "thread" }, { leaf: "flat-plain", why: "Spreads the load", fit: "thread" }],
+  "hex-nuts":         [{ leaf: "hex-bolts", why: "Takes this nut", fit: "thread" }, { leaf: "socket-head-cap", why: "Takes this nut", fit: "thread" }, { leaf: "flat-plain", why: "Spreads the load", fit: "thread" }],
+  "nyloc-nuts":       [{ leaf: "socket-head-cap", why: "Takes this nut", fit: "thread" }, { leaf: "hex-bolts", why: "Takes this nut", fit: "thread" }],
+  "brass-standoffs":  [{ leaf: "pan-head", why: "Screws into this", fit: "thread" }, { leaf: "hex-nuts", why: "Takes this thread", fit: "thread" }],
+  "pcb-spacers":      [{ leaf: "pan-head", why: "Passes through this", fit: "thread" }],
+  "brass-heat-set":   [{ leaf: "socket-head-cap", why: "Threads into this", fit: "thread" }, { leaf: "button-head", why: "Threads into this", fit: "thread" }],
+
+  /* bearings — the dimension that must agree is the bore */
+  "deep-groove":      [{ leaf: "circlips", why: "Retains this bearing", fit: "bore_id_mm" }, { leaf: "pillow-blocks", why: "Houses this bore", fit: "bore_id_mm" }, { leaf: "shaft-couplers", why: "Fits this bore", fit: "bore_id_mm" }],
+  "linear-ball-bearings": [{ leaf: "linear-rails-mgn", why: "Runs on this", fit: "bore_id_mm" }, { leaf: "circlips", why: "Retains this bearing", fit: "bore_id_mm" }],
+  "pillow-blocks":    [{ leaf: "deep-groove", why: "Fits this housing", fit: "bore_id_mm" }],
+
+  /* motors — a motor's complement is what drives it and what couples to it */
+  "nema-17":          [{ leaf: "dc-motor-drivers", why: "Drives this motor" }, { leaf: "stepper-drivers", why: "Drives this motor" }, { leaf: "mounts-brackets", why: "Mounts this motor" }, { leaf: "shaft-couplers", why: "Couples this shaft", fit: "shaft_dia_mm" }, { leaf: "smps-modules", why: "Powers this motor" }],
+  "brushed-dc":       [{ leaf: "dc-motor-drivers", why: "Drives this motor" }, { leaf: "encoders", why: "Reads this shaft" }, { leaf: "shaft-couplers", why: "Couples this shaft", fit: "shaft_dia_mm" }],
+  "geared-dc-bo-tt":  [{ leaf: "dc-motor-drivers", why: "Drives this motor" }, { leaf: "mounts-brackets", why: "Mounts this motor" }, { leaf: "encoders", why: "Reads this shaft" }],
+  "planetary-gear":   [{ leaf: "dc-motor-drivers", why: "Drives this motor" }, { leaf: "shaft-couplers", why: "Couples this shaft", fit: "shaft_dia_mm" }, { leaf: "mounts-brackets", why: "Mounts this motor" }],
+  "standard-hobby":   [{ leaf: "mounts-brackets", why: "Mounts this servo" }, { leaf: "arduino-compatible", why: "Commands this servo" }, { leaf: "smps-modules", why: "Powers this servo" }],
+  "outrunner":        [{ leaf: "single-escs", why: "Drives this motor" }, { leaf: "lipo-packs-rc", why: "Powers this motor" }, { leaf: "xt-bullet", why: "Terminates this motor" }],
+  "gimbal":           [{ leaf: "single-escs", why: "Drives this motor" }, { leaf: "fc-boards", why: "Commands this gimbal" }],
+  "dc-motor-drivers": [{ leaf: "nema-17", why: "Driven by this board" }, { leaf: "brushed-dc", why: "Driven by this board" }, { leaf: "heat-sinks", why: "Cools this board" }, { leaf: "smps-modules", why: "Powers this board" }],
+  "linear-actuators": [{ leaf: "dc-motor-drivers", why: "Drives this actuator" }, { leaf: "smps-modules", why: "Powers this actuator" }],
+  "solenoid-valves":  [{ leaf: "mosfets", why: "Switches this valve" }, { leaf: "smps-modules", why: "Powers this valve" }],
+  "water-air-pumps":  [{ leaf: "dc-motor-drivers", why: "Drives this pump" }, { leaf: "smps-modules", why: "Powers this pump" }],
+
+  /* drones — the stack the user named: motor + ESC, ESC + flight controller */
+  "2004-2306":        [{ leaf: "single-escs", why: "Drives this motor" }, { leaf: "4-5", why: "Turns on this motor" }, { leaf: "freestyle", why: "Mounts this motor" }, { leaf: "lipo-packs-rc", why: "Powers this build" }],
+  "heavy-lift":       [{ leaf: "single-escs", why: "Drives this motor" }, { leaf: "4-5", why: "Turns on this motor" }, { leaf: "lipo-packs-rc", why: "Powers this build" }],
+  "single-escs":      [{ leaf: "fc-boards", why: "Commands this ESC" }, { leaf: "2004-2306", why: "Driven by this ESC" }, { leaf: "xt-bullet", why: "Terminates this ESC" }, { leaf: "lipo-packs-rc", why: "Powers this ESC" }],
+  "fc-boards":        [{ leaf: "single-escs", why: "Commanded by this board" }, { leaf: "rc-receivers", why: "Feeds this board" }, { leaf: "fpv-cameras", why: "Wires to this board" }, { leaf: "standoffs", why: "Stacks this board" }],
+  "stack-combos":     [{ leaf: "2004-2306", why: "Driven by this stack" }, { leaf: "rc-receivers", why: "Feeds this stack" }, { leaf: "freestyle", why: "Houses this stack" }],
+  freestyle:          [{ leaf: "2004-2306", why: "Mounts on this frame" }, { leaf: "standoffs", why: "Builds this frame" }, { leaf: "drone-screws", why: "Assembles this frame" }],
+  "rc-receivers":     [{ leaf: "rc-transmitters", why: "Binds to this receiver" }, { leaf: "fc-boards", why: "Reads this receiver" }],
+  "rc-transmitters":  [{ leaf: "rc-receivers", why: "Binds to this radio" }],
+  "fpv-cameras":      [{ leaf: "goggles-rx", why: "Receives this camera" }, { leaf: "antennas", why: "Transmits this camera" }],
+  "goggles-rx":       [{ leaf: "fpv-cameras", why: "Seen in these goggles" }, { leaf: "antennas", why: "Feeds these goggles" }],
+  "4-5":              [{ leaf: "2004-2306", why: "Turns these props" }, { leaf: "drone-screws", why: "Fixes these props" }],
+  "2-3":              [{ leaf: "2004-2306", why: "Turns these props" }],
+
+  /* power — a cell is not a pack until it has a holder, a strip and a BMS */
+  "lipo-packs-rc":    [{ leaf: "lipo-balance", why: "Charges this pack" }, { leaf: "xt-bullet", why: "Terminates this pack" }, { leaf: "monitors", why: "Watches this pack" }],
+  "li-ion-packs":     [{ leaf: "li-ion", why: "Charges this pack" }, { leaf: "bms-boards", why: "Protects this pack" }],
+  "18650":            [{ leaf: "cell-holders", why: "Holds these cells" }, { leaf: "nickel-strip", why: "Welds these cells" }, { leaf: "bms-boards", why: "Protects these cells" }, { leaf: "li-ion", why: "Charges these cells" }],
+  "bms-boards":       [{ leaf: "18650", why: "Protected by this board" }, { leaf: "nickel-strip", why: "Wires to this board" }],
+  "cell-holders":     [{ leaf: "18650", why: "Fits this holder" }, { leaf: "nickel-strip", why: "Joins in this holder" }],
+
+  /* electronics — the pairings an assembled board actually needs */
+  "arduino-compatible": [{ leaf: "dupont-jumper", why: "Wires this board" }, { leaf: "headers", why: "Terminates this board" }, { leaf: "lcd-character", why: "Displays from this board" }, { leaf: "ac-dc-adapters", why: "Powers this board" }],
+  "esp32-esp8266":    [{ leaf: "dupont-jumper", why: "Wires this board" }, { leaf: "headers", why: "Terminates this board" }, { leaf: "antennas", why: "Extends this board" }],
+  "raspberry-pi-hats": [{ leaf: "ac-dc-adapters", why: "Powers this board" }, { leaf: "heat-sinks", why: "Cools this board" }, { leaf: "headers", why: "Stacks on this board" }],
+  "stm32-arm":        [{ leaf: "dupont-jumper", why: "Wires this board" }, { leaf: "headers", why: "Terminates this board" }],
+  leds:               [{ leaf: "resistors-tht", why: "Limits this LED" }],
+  mosfets:            [{ leaf: "heat-sinks", why: "Cools this device" }, { leaf: "resistors-tht", why: "Gates this device" }],
+  regulators:         [{ leaf: "electrolytic-caps", why: "Decouples this regulator" }, { leaf: "heat-sinks", why: "Cools this regulator" }],
+  microcontrollers:   [{ leaf: "crystals", why: "Clocks this device" }, { leaf: "ceramic-capacitors", why: "Decouples this device" }, { leaf: "headers", why: "Terminates this device" }],
+  "buck-converters":  [{ leaf: "electrolytic-caps", why: "Smooths this converter" }, { leaf: "heat-sinks", why: "Cools this converter" }],
+
+  /* 3d printing */
+  "control-boards":   [{ leaf: "stepper-drivers", why: "Plugs into this board" }, { leaf: "heat-sinks", why: "Cools this board" }],
+  "stepper-drivers":  [{ leaf: "nema-17", why: "Driven by this driver" }, { leaf: "control-boards", why: "Takes this driver" }, { leaf: "heat-sinks", why: "Cools this driver" }],
+  "hotend-assemblies": [{ leaf: "nozzles", why: "Fits this hotend" }, { leaf: "pla", why: "Prints through this" }],
+  nozzles:            [{ leaf: "hotend-assemblies", why: "Takes this nozzle" }],
+  "linear-rails-mgn": [{ leaf: "socket-head-cap", why: "Bolts this rail", fit: "thread" }, { leaf: "linear-ball-bearings", why: "Runs on this rail" }],
+  "lead-screws":      [{ leaf: "nema-17", why: "Turns this screw" }, { leaf: "shaft-couplers", why: "Couples this screw", fit: "shaft_dia_mm" }],
+  pla:                [{ leaf: "nozzles", why: "Prints this filament" }, { leaf: "heated-beds", why: "Sticks to this bed" }],
+  petg:               [{ leaf: "nozzles", why: "Prints this filament" }, { leaf: "heated-beds", why: "Sticks to this bed" }],
+  abs:                [{ leaf: "nozzles", why: "Prints this filament" }, { leaf: "heated-beds", why: "Sticks to this bed" }],
+};
+
+/**
+ * The L1 drawers `worksWith` will reach into for this part, so the page can
+ * load them before calling it.
+ *
+ * Most complements are in the part's own drawer — a drone motor and its ESC
+ * are both `drones-parts` — so this usually returns that one drawer and the
+ * page does no extra reads. A LiPo pack under `batteries-power` is the case
+ * that makes the lookup worth doing at all.
+ */
+export function complementDrawers(sku: Sku): string[] {
+  const leaves = new Set((COMPLEMENTS[sku.categories[0].at(-1) ?? ""] ?? []).map((p) => p.leaf));
+  if (!leaves.size) return [];
+  const out = new Set<string>();
+  for (const path of allPaths()) {
+    if (leaves.has(path.at(-1) ?? "")) out.add(path[0]);
   }
-  if (leaf === "deep-groove") {
-    return all
-      .filter((s) => s.categories[0].at(-1) === "deep-groove" && s.sku !== sku.sku && s.stock > 0)
-      .filter((s) => Number(s.attrs.bore_id_mm) === Number(sku.attrs.bore_id_mm))
-      .slice(0, limit);
+  return [...out];
+}
+
+/**
+ * Platform tokens the supplier declared for this part — `NEMA17`, `Raspberry Pi
+ * Zero`, `R9 series`. Stored pipe-separated on the `compatibility` attribute
+ * because it is one more typed attribute, which is the mechanism the whole
+ * catalogue already rests on, rather than a relationship table nobody fills in.
+ */
+export const compatTokens = (sku: Sku): string[] =>
+  String(sku.attrs.compatibility ?? "")
+    .split("|")
+    .map((t) => t.trim())
+    .filter(Boolean);
+
+const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+export type Complement = {
+  sku: Sku;
+  why: string;
+  /**
+   * True when a dimension or a supplier-declared token was actually checked
+   * for this pair. False when the pairing is category-level only.
+   *
+   * The distinction is not cosmetic. "Fits this holder" is provable for a
+   * bearing and a circlip, because the bore agrees. It is not provable for a
+   * cell holder and a cell, because nothing in the data records which cell a
+   * holder takes — and a coin-cell holder under an 18650 is exactly what that
+   * gap produces. The page states the weaker claim weakly rather than
+   * asserting a fit nobody verified.
+   */
+  proven: boolean;
+};
+
+/**
+ * Parts that complete this one. Never alternatives to it — that is
+ * `substitutes`, and having both under near-identical headings was the older
+ * page's worst habit.
+ */
+export function worksWith(sku: Sku, pool: Sku[], limit = 6): Complement[] {
+  const leaf = sku.categories[0].at(-1) ?? "";
+  const pairings = COMPLEMENTS[leaf] ?? [];
+  const mine = new Set(compatTokens(sku).map(norm));
+
+  const candidates = pool.filter((s) => s.sku !== sku.sku && s.stock > 0);
+  const picked = new Map<string, Complement>();
+
+  const take = (s: Sku, why: string, proven: boolean) => {
+    if (!picked.has(s.sku) && picked.size < limit) picked.set(s.sku, { sku: s, why, proven });
+  };
+
+  // 1. A complementary leaf where the dimension that has to agree, agrees.
+  for (const p of pairings) {
+    const key = p.fit;
+    if (!key) continue;
+    // Unknown on either side is not a match. A part with no thread recorded
+    // must not pair with every nut in the drawer on the strength of both
+    // being blank.
+    const want = sku.attrs[key];
+    if (want === undefined || want === "") continue;
+    for (const s of candidates) {
+      if (s.categories[0].at(-1) !== p.leaf) continue;
+      if (String(s.attrs[key] ?? "") !== String(want)) continue;
+      take(s, p.why, true);
+    }
   }
-  return all.filter((s) => s.sku !== sku.sku && s.stock > 0 && s.categories[0][0] === sku.categories[0][0]).slice(0, limit);
+
+  // 2. A part the supplier declared for the same platform.
+  if (mine.size) {
+    for (const s of candidates) {
+      const shared = compatTokens(s).find((t) => mine.has(norm(t)));
+      if (shared) take(s, `Listed for ${shared}`, true);
+    }
+  }
+
+  /*
+    3. The complementary leaf, with nothing dimensional to check.
+
+    Runs last, which is the whole guard it needs: `take` fills slots in rule
+    order, so a match we can prove has already claimed its place before any of
+    these are considered. What these rows do not get is the accent — see
+    `proven` on the return type.
+  */
+  for (const p of pairings) {
+    for (const s of candidates) {
+      if (s.categories[0].at(-1) === p.leaf) take(s, p.why, false);
+    }
+  }
+
+  return [...picked.values()].slice(0, limit);
 }
 
 /**

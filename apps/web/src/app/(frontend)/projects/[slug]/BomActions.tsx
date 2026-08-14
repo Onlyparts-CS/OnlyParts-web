@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { addToCart } from "@/lib/store";
+import { addManyToCart } from "@/lib/store";
 import type { Sku } from "@/lib/skus";
 import { inr } from "@/lib/catalog";
 
@@ -36,7 +36,7 @@ export function BomActions({ picks, projectName, projectSlug }: {
   const skipped = picks.length - inStock.length;
 
   const addAll = () => {
-    for (const s of inStock) addToCart(s.sku, 1);
+    addManyToCart(inStock.map((s) => ({ sku: s.sku })));
     setAdded(inStock.length);
     // The header's cart badge reads from the same store; nudge the tree so it
     // updates without a reload.

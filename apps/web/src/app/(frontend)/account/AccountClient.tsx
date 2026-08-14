@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import {
-  useStore, signOut, updateUser, removeAddress, saveAddress, addToCart,
+  useStore, signOut, updateUser, removeAddress, saveAddress, addManyToCart,
 } from "@/lib/store";
 import type { OrderView } from "@/lib/orderRead";
 import { STATES, isValidGstin } from "@/lib/gst";
@@ -141,7 +141,7 @@ function Orders({ orders }: { orders: OrderView[] }) {
   }
 
   const reorder = (skus: { sku: string; qty: number }[]) =>
-    skus.forEach((l) => addToCart(l.sku, l.qty));
+    addManyToCart(skus);
 
   return (
     <div className="grid gap-4">

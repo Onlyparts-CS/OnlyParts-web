@@ -152,11 +152,26 @@ export const useStore = () => useSyncExternalStore(subscribe, getSnapshot, getSe
 
 /* ---------------- cart ---------------- */
 
-export function addToCart(sku: string, qty = 1) {
+export const addToCart = (sku: string, qty = 1) => addManyToCart([{ sku, qty }]);
+
+/**
+ * Add several lines in one commit.
+ *
+ * `set` writes localStorage *and* notifies every subscriber, so looping
+ * `addToCart` over a six-part kit costs six serialisations and six renders of
+ * the header, the cart drawer and whatever else is listening. Four call sites
+ * were already doing exactly that. Adding a set at a time is the honest shape
+ * of the operation anyway: the buyer pressed one button.
+ */
+export function addManyToCart(lines: { sku: string; qty?: number }[]) {
+  if (!lines.length) return;
   const cart = [...state.cart];
-  const i = cart.findIndex((l) => l.sku === sku);
-  if (i >= 0) cart[i] = { ...cart[i], qty: cart[i].qty + qty };
-  else cart.push({ sku, qty });
+  for (const { sku, qty = 1 } of lines) {
+    if (qty <= 0) continue;
+    const i = cart.findIndex((l) => l.sku === sku);
+    if (i >= 0) cart[i] = { ...cart[i], qty: cart[i].qty + qty };
+    else cart.push({ sku, qty });
+  }
   set({ cart });
 }
 

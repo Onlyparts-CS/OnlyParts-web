@@ -74,6 +74,13 @@ export const IMPORT_FIELDS = [
   "bore_id_mm", "outer_od_mm", "width_mm", "seal_type",
   "dia_mm", "thickness_mm", "coating",
   "torque_ncm", "body_length_mm", "shaft_dia_mm",
+  // Pipe-separated platform tokens as the supplier stated them — "NEMA17",
+  // "Raspberry Pi 5", "R9 series". One more typed attribute rather than a
+  // relationship table, because it is what pairs a part with the parts that
+  // complete it, and a typed attribute is the mechanism the catalogue already
+  // runs on. Never inferred from the title: a listing that says "Compatible
+  // with Arduino" in prose has not declared anything.
+  "compatibility",
 ] as const;
 
 /** Columns that are the product/variant itself rather than one of its specs. */

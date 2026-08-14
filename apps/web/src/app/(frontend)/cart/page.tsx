@@ -211,7 +211,7 @@ export default function CartPage() {
             </Link>
 
             <p className="mt-3 text-center font-mono text-[0.625rem] text-disabled">
-              UPI · Cards · Netbanking · COD · GST invoice on every order
+              UPI · Cards · Netbanking · GST invoice on every order
             </p>
           </div>
         </aside>

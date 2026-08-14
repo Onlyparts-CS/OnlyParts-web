@@ -375,7 +375,9 @@ export const Orders: CollectionConfig = {
                 { label: "UPI", value: "upi" },
                 { label: "Card", value: "card" },
                 { label: "Netbanking", value: "netbanking" },
-                { label: "Cash on delivery", value: "cod" },
+                // No longer offered. Kept so orders taken before the switch to
+                // online-only payment still describe themselves correctly.
+                { label: "Cash on delivery (withdrawn)", value: "cod" },
                 { label: "Bank transfer", value: "neft" },
               ],
             },

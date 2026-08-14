@@ -44,8 +44,16 @@ export type PlaceOrderInput = {
   cart: CartInput[];
   contact: ContactInput;
   shipTo: AddressInput;
+  /**
+   * `cod` and `neft` are still in the union because orders taken before the
+   * switch to online-only payment carry them and this type reads those back.
+   * Neither can be *placed* — see the accepted set below.
+   */
   paymentMethod: "upi" | "card" | "netbanking" | "cod" | "neft";
 };
+
+/** What a buyer may choose today. Historic orders hold values outside this. */
+const PLACEABLE_METHODS: PlaceOrderInput["paymentMethod"][] = ["upi", "card", "netbanking"];
 
 export type PlaceOrderResult =
   | { ok: true; number: string; id: string | number; grandTotal: number }
@@ -85,6 +93,13 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
   // Public endpoint, client-supplied array: cap it before it becomes a 10,000
   // element `IN (…)` against the variants table.
   if (input.cart.length > 100) errors.cart = "Too many lines — split this into separate orders, or send it as an RFQ.";
+
+  // Online payment only. The picker no longer offers cash on delivery, but
+  // this is a public endpoint taking a client-supplied string, so removing the
+  // radio button is not the same as declining the method.
+  if (!PLACEABLE_METHODS.includes(input.paymentMethod)) {
+    errors.paymentMethod = "Choose UPI, card or netbanking — we do not take cash on delivery.";
+  }
 
   const gstin = input.contact.gstin?.trim().toUpperCase();
   if (gstin && !isValidGstin(gstin)) errors.gstin = "That is not a valid GSTIN.";
@@ -236,7 +251,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<PlaceOrderResu
       overrideAccess: true,
       data: {
         status: "pending",
-        // COD is confirmed on delivery; everything else waits for the gateway.
+        // Every order now waits for the gateway; nothing ships unpaid.
         paymentStatus: "pending",
         channel: "web",
         customer: customer.id,

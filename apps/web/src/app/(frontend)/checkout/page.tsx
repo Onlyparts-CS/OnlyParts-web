@@ -14,7 +14,7 @@ import {
 import { inr } from "@/lib/catalog";
 import { InvoiceIcon, TruckIcon } from "@/components/Icons";
 
-type Method = "upi" | "card" | "netbanking" | "cod";
+type Method = "upi" | "card" | "netbanking";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -245,7 +245,6 @@ export default function CheckoutPage() {
                 ["upi", "UPI", "GPay, PhonePe, Paytm, any UPI app"],
                 ["card", "Card", "Visa, Mastercard, RuPay, Amex"],
                 ["netbanking", "Netbanking", "All major Indian banks"],
-                ["cod", "Cash on delivery", "Available under ₹20,000"],
               ] as [Method, string, string][]).map(([k, label, hint]) => (
                 <label key={k}
                   className={`flex cursor-pointer items-center gap-3 rounded-sm border p-3 transition-colors ${
@@ -315,7 +314,7 @@ export default function CheckoutPage() {
 
             <button onClick={submit} disabled={placing}
               className="btn btn-primary mt-5 w-full disabled:opacity-60">
-              {placing ? "Placing order…" : method === "cod" ? "Place order (COD)" : `Pay ${inr(totals.grand)}`}
+              {placing ? "Placing order…" : `Pay ${inr(totals.grand)}`}
             </button>
 
             {touched && !valid && (

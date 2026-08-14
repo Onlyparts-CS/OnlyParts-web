@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import {
-  buildMatrix, listings, substitutes, boughtWith, projectsFor, hsnFor,
+  buildMatrix, listings, substitutes, worksWith, complementDrawers, projectsFor, hsnFor,
 } from "@/lib/product";
 import { dbFindSku, dbSkusInPath } from "@/lib/catalogDb";
 import { inr } from "@/lib/catalog";
@@ -12,6 +12,7 @@ import { BuyBox } from "@/components/product/BuyBox";
 import { SpecTable } from "@/components/product/SpecTable";
 import { VariantMatrix } from "@/components/product/VariantMatrix";
 import { Reviews } from "@/components/product/Reviews";
+import { WorksWith } from "@/components/product/WorksWith";
 import { ProductTile, stockState } from "@/components/catalog/ProductTile";
 import { Glyph } from "@/components/Glyph";
 import { StarIcon, ArrowRight } from "@/components/Icons";
@@ -54,7 +55,23 @@ export default async function ProductPage({ params }: Props) {
   const stock = stockState(sku.stock);
   const hsn = hsnFor(sku);
   const subs = substitutes(sku, shelf);
-  const together = boughtWith(sku, drawer);
+
+  /*
+    Complements usually sit in the same drawer as the part they complete — a
+    drone motor and its ESC are both `drones-parts` — so the read above covers
+    most of them for free. The exceptions are real (a LiPo pack lives under
+    `batteries-power`, not under the motor it powers), so any drawer the
+    pairing map reaches into and this page has not already loaded is fetched
+    once here. In practice that is nought or one extra read, not one per row.
+  */
+  const extra = (
+    await Promise.all(
+      complementDrawers(sku)
+        .filter((d) => d !== sku.categories[0][0])
+        .map((d) => dbSkusInPath([d])),
+    )
+  ).flat();
+  const together = worksWith(sku, [...drawer, ...extra]);
   const projects = projectsFor(sku);
   const topBreak = sku.breaks.at(-1)!;
 
@@ -225,15 +242,8 @@ export default async function ProductPage({ params }: Props) {
           </div>
         </section>
 
-        {/* ---------- cross-sell ---------- */}
-        {together.length > 0 && (
-          <section>
-            <h2 className="mb-4 text-xl">Frequently bought with</h2>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-              {together.map((s) => <ProductTile key={s.sku} sku={s} />)}
-            </div>
-          </section>
-        )}
+        {/* ---------- complements: buy the set, one line each ---------- */}
+        <WorksWith anchor={sku} items={together} />
 
         <Reviews sku={sku.sku} title={sku.title} rating={sku.rating} ratingCount={sku.ratingCount} />
 

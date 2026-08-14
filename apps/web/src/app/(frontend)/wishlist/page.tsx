@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useStore, removeWish, addToCart } from "@/lib/store";
+import { useStore, removeWish, addToCart, addManyToCart } from "@/lib/store";
 import { useResolvedWishlist } from "@/lib/useCatalogue";
 import { inr } from "@/lib/catalog";
 import { Frame } from "@/components/Frame";
@@ -36,7 +36,7 @@ export default function WishlistPage() {
         </div>
         {inStock.length > 0 && (
           <button
-            onClick={() => inStock.forEach((s) => addToCart(s.sku, 1))}
+            onClick={() => addManyToCart(inStock.map((s) => ({ sku: s.sku })))}
             className="btn btn-primary btn-sm"
           >
             <CartIcon className="size-4" />

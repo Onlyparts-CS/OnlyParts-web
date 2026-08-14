@@ -85,7 +85,7 @@ export function Footer() {
               <Link key={label} href={href} className="underline-offset-4 hover:text-spot-700 hover:underline">{label}</Link>
             ))}
           </span>
-          <span className="bin">UPI · Visa · Mastercard · Netbanking · COD</span>
+          <span className="bin">UPI · Visa · Mastercard · Netbanking</span>
         </div>
       </div>
     </footer>

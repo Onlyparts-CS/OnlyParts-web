@@ -378,6 +378,115 @@ const COUNTRIES = {
   usa: "United States",
 };
 
+/* ------------------------------------------------------------------ *
+ * Typed spec columns
+ *
+ * `parseSpecs` deliberately keeps its output in the JSON and out of the
+ * importer's typed columns, because "Material: SS 304" and `material=ss304`
+ * are only the same thing if somebody has checked. This is that check, written
+ * down: a supplier key only becomes a typed column when the value it carries
+ * passes a validator strict enough that the mapping cannot be wrong.
+ *
+ * Everything that does not pass is dropped, not guessed. The harvest contains
+ * `Thread: Hardened Steel` and `Length: 20meters`, and a lenient parser turns
+ * both into numbers that look like specifications. A blank cell is a gap
+ * somebody can fill; a wrong one is a spec table that lies.
+ * ------------------------------------------------------------------ */
+
+/** `12mm`, `12 mm`, `1.75±0.03 mm` -> 12 / 1.75. Rejects other units outright. */
+function mm(v) {
+  const s = String(v ?? "").replace(/&plusmn;|±/g, " ").trim();
+  // A unit that is not a millimetre is a different measurement, not a
+  // millimetre needing conversion — "20meters" of cable is not a 20mm part.
+  if (/\b(m|cm|meter|metre|inch|in|ft|feet|mil)\b|meters|metres|inches/i.test(s)) return "";
+  const m = s.match(/^(\d+(?:\.\d+)?)\s*(?:mm)?\b/i);
+  if (!m) return "";
+  const n = Number(m[1]);
+  return n > 0 && n < 10000 ? String(n) : "";
+}
+
+/** Metric or imperial thread designations only. `M6 × 1.0` keeps the M6. */
+function thread(v) {
+  const s = String(v ?? "").trim();
+  const metric = s.match(/^M(\d+(?:\.\d+)?)\b/i);
+  if (metric) return `M${metric[1]}`;
+  const imperial = s.match(/^(\d+\/\d+)\s*(BSP|NPT|UNC|UNF|BSW)\b/i);
+  if (imperial) return `${imperial[1]} ${imperial[2].toUpperCase()}`;
+  return "";
+}
+
+/** A short free-text value, kept as the supplier wrote it. */
+const words = (max) => (v) => {
+  const s = String(v ?? "").replace(/\s+/g, " ").trim();
+  return s && s.length <= 60 && s.split(" ").length <= max ? s : "";
+};
+
+/** Fastener property class, magnet grade, solder alloy — never prose. */
+function grade(v) {
+  const s = String(v ?? "").trim();
+  return /^(\d{1,2}\.\d|N\d{2}|\d{2}-\d{2})$/i.test(s) ? s.toUpperCase() : "";
+}
+
+/**
+ * Platform tokens, pipe-separated.
+ *
+ * This is the one column `worksWith` pairs on, so it is the one where a loose
+ * value does visible damage: a wrong token puts an unrelated part under "Works
+ * with this part" with a reason line claiming the supplier said so. Only the
+ * explicit `Compatibility` spec feeds it. Titles do not — "Compatible with
+ * Arduino" in a sentence is marketing, not a declaration.
+ */
+function compatibility(v) {
+  const parts = String(v ?? "")
+    .split(/\s*(?:,|\/|\band\b|\|)\s*/i)
+    .map((t) => t.replace(/\s+/g, " ").trim())
+    .filter((t) => t.length >= 2 && t.length <= 40 && /[A-Za-z0-9]/.test(t))
+    // "compatible", "series" and friends are the sentence around the token.
+    .filter((t) => !/^(compatible|compatible with|series|etc|others?|more)$/i.test(t));
+  return [...new Set(parts)].slice(0, 6).join("|");
+}
+
+/**
+ * Supplier spec key -> importer column, in priority order per column. The
+ * first key present that also passes the validator wins.
+ */
+const SPEC_COLUMNS = [
+  ["compatibility", ["Compatibility"], compatibility],
+  ["material", ["Material", "Body Material", "Magnet Material"], words(4)],
+  ["finish", ["Finish", "Plating", "Surface Finish"], words(4)],
+  ["coating", ["Coating"], words(4)],
+  ["grade", ["Grade", "Property Class", "Magnet Grade"], grade],
+  ["thread", ["Thread Size", "Thread", "Screw Size"], thread],
+  ["length_mm", ["Bolt Length", "Screw Length", "Length"], mm],
+  ["dia_mm", ["Diameter", "Filament Diameter", "Outer Diameter"], mm],
+  ["bore_id_mm", ["Bore", "Inner Diameter", "Bore Diameter", "Bore Size"], mm],
+  ["outer_od_mm", ["Outer Diameter", "OD"], mm],
+  ["width_mm", ["Width"], mm],
+  ["thickness_mm", ["Thickness"], mm],
+  ["shaft_dia_mm", ["Shaft Diameter", "Shaft Dia"], mm],
+];
+
+/** Case-insensitive exact key lookup — supplier casing is not consistent. */
+function specValue(specs, key) {
+  const want = key.toLowerCase();
+  for (const [k, v] of Object.entries(specs ?? {})) {
+    if (k.trim().toLowerCase() === want) return v;
+  }
+  return undefined;
+}
+
+/** The typed columns this row's harvested specs actually support. */
+function typedSpecs(specs) {
+  const out = {};
+  for (const [column, keys, parse] of SPEC_COLUMNS) {
+    for (const key of keys) {
+      const parsed = parse(specValue(specs, key));
+      if (parsed) { out[column] = parsed; break; }
+    }
+  }
+  return out;
+}
+
 function originFrom(specs) {
   for (const [k, v] of Object.entries(specs ?? {})) {
     if (!ORIGIN_KEY.test(k.trim())) continue;
@@ -641,8 +750,51 @@ function selfCheck() {
     }
   }
 
+  /*
+    Typed spec columns. The harvest really contains `Thread: Hardened Steel`
+    and `Length: 20meters`; both must come out blank, because a wrong spec is a
+    dimension somebody orders against.
+  */
+  const specCases = [
+    [{ "Thread Size": "M6" }, { thread: "M6" }, "a clean thread designation"],
+    [{ Thread: "M6 × 1.0" }, { thread: "M6" }, "the pitch is dropped, the thread kept"],
+    [{ "Thread Size": "3/8 BSP" }, { thread: "3/8 BSP" }, "imperial threads are real threads"],
+    [{ Thread: "the metric positive thread" }, {}, "prose is not a thread"],
+    [{ Thread: "Hardened Steel" }, {}, "nor is a material"],
+
+    [{ "Bolt Length": "45mm" }, { length_mm: "45" }, "millimetres, unspaced"],
+    [{ Length: "250 mm" }, { length_mm: "250" }, "millimetres, spaced"],
+    [{ Length: "20meters" }, {}, "a different unit is a different measurement"],
+    [{ Length: "4 inch" }, {}, "same"],
+    [{ "Filament Diameter": "1.75 mm ± 0.03 mm" }, { dia_mm: "1.75" }, "a tolerance does not defeat it"],
+    [{ "Filament Diameter": "1.75&plusmn;0.03mm" }, { dia_mm: "1.75" }, "nor does the entity"],
+    [{ Diameter: "0mm" }, {}, "zero is not a dimension"],
+
+    [{ Grade: "12.9" }, { grade: "12.9" }, "a fastener property class"],
+    [{ Grade: "N52" }, { grade: "N52" }, "a magnet grade"],
+    [{ Grade: "Solar Grade" }, {}, "a marketing grade is not a grade"],
+
+    [{ Compatibility: "Hakko 900M series soldering irons" }, { compatibility: "Hakko 900M series soldering irons" }, "one token, kept whole"],
+    [{ Compatibility: "Arduino UNO, Mega 2560" }, { compatibility: "Arduino UNO|Mega 2560" }, "a list becomes tokens"],
+    [{ Compatibility: "ESP32 / ESP8266" }, { compatibility: "ESP32|ESP8266" }, "slashes separate too"],
+    [{ Compatibility: "compatible" }, {}, "the sentence around the token is not the token"],
+    [{}, {}, "no specs, no columns"],
+
+    [{ Material: "Stainless Steel 304" }, { material: "Stainless Steel 304" }, "material as written"],
+    [{ MATERIAL: "Brass" }, { material: "Brass" }, "supplier casing varies"],
+    [{ Brand: "India Electronics" }, {}, "an unmapped key contributes nothing"],
+  ];
+  for (const [specs, want, why] of specCases) {
+    const got = typedSpecs(specs);
+    if (JSON.stringify(got) !== JSON.stringify(want)) {
+      console.error(`  ✗ ${why}\n      ${JSON.stringify(specs)}\n      want ${JSON.stringify(want)} · got ${JSON.stringify(got)}`);
+      failed++;
+    }
+  }
+
   const total =
-    cases.length + parkCases.length + resolveCases.length + projectCases.length + originCases.length;
+    cases.length + parkCases.length + resolveCases.length + projectCases.length +
+    originCases.length + specCases.length;
   console.log(failed ? `\n${failed}/${total} failed` : `${total}/${total} passed`);
   process.exit(failed ? 1 : 0);
 }
@@ -688,6 +840,13 @@ function enrich(row) {
       rather than the gap being discovered by an inspector.
     */
     countryOfOrigin: row.countryOfOrigin || originFrom(row.specs),
+    /*
+      76% of harvested rows carry a spec block and the CSV used to emit none of
+      it, so every imported part landed with an empty spec table. Only the
+      values that survive `typedSpecs` are promoted — see the note there on why
+      dropping beats guessing.
+    */
+    ...typedSpecs(row.specs),
   };
 }
 
@@ -1010,7 +1169,15 @@ async function pullRobu(limit, concurrency, state, full) {
 // `country_of_origin` carries the ~90 rows a supplier happened to state. The
 // other four Rule 6(1) columns the importer understands are not emitted: the
 // crawl has no source for them, and an empty column on 119,864 rows is noise.
-const CSV_COLS = ["sku", "title", "price", "stock", "hsn", "gst_rate", "weight_g", "category", "projects", "country_of_origin"];
+const CSV_COLS = [
+  "sku", "title", "price", "stock", "hsn", "gst_rate", "weight_g", "category", "projects",
+  "country_of_origin",
+  // Typed spec columns, populated only where `typedSpecs` could prove the
+  // mapping. Mostly blank across the whole feed, and that is the honest state:
+  // no supplier publishes a structured attribute table.
+  "compatibility", "material", "finish", "coating", "grade", "thread",
+  "length_mm", "dia_mm", "bore_id_mm", "outer_od_mm", "width_mm", "thickness_mm", "shaft_dia_mm",
+];
 
 const cell = (v) => {
   const s = String(v ?? "");
