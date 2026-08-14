@@ -130,14 +130,26 @@ const context = cache(async (): Promise<Ctx> => {
     payload.find({ collection: "inventory", limit: 5000, depth: 0, overrideAccess: true }),
     payload.find({ collection: "builds", limit: 200, depth: 0, overrideAccess: true }),
     /*
-      Products again, at depth 1, purely for the media join.
+      Products at depth 1, purely for the media join — but only the ones that
+      actually have media.
 
-      The variants query above already carries the product at depth 1, but
-      going to depth 2 there to reach `media.image` would populate the whole
-      product graph once per variant — 1,200 times over for seven products'
-      worth of photographs. One extra query is the cheaper shape.
+      Going to depth 2 on the variants query to reach `media.image` would
+      populate the whole product graph once per variant, so a separate read is
+      the cheaper shape. Reading *every* product, however, was paying for the
+      whole catalogue hydrated at depth 1 on every request in order to build a
+      map that is empty: uploaded media is currently 0 rows, and even when it
+      fills it will cover a handful of products, not 3,807.
+
+      Measured on the 3,807-row catalogue: 519 ms and several hundred MB of
+      short-lived objects per request. In production that was most of a 1.2 s
+      page; in `next dev` it grew the heap to 3.5 GB and the page took 38 s,
+      almost all of it garbage collection.
     */
-    payload.find({ collection: "products", limit: 5000, depth: 1, overrideAccess: true }),
+    payload.find({
+      collection: "products",
+      where: { "media.image": { exists: true } },
+      limit: 5000, depth: 1, overrideAccess: true,
+    }),
   ]);
 
   const stockByVariant = new Map<string, number>();
