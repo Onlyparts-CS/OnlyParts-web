@@ -83,6 +83,19 @@ export const IMPORT_FIELDS = [
   "compatibility",
 ] as const;
 
+/**
+ * The four Legal Metrology declarations that block a product going Active.
+ *
+ * `country_of_origin` is the deliberate exception and is not here — see the
+ * note on it in `Products.ts`. One list because `dryRun` warns on it and the
+ * importer decides `status` from it, and those two must not drift.
+ */
+export const RULE6_GATED = ["mrp", "net_quantity", "importer_name", "importer_address"] as const;
+
+/** True when a row carries every declaration a live listing needs. */
+export const rule6Complete = (row: ImportRow) =>
+  RULE6_GATED.every((f) => row[f]?.trim());
+
 /** Columns that are the product/variant itself rather than one of its specs. */
 const CORE_FIELDS = [
   "sku", "title", "price", "stock", "hsn", "gst_rate", "weight_g", "category", "projects",
@@ -262,6 +275,24 @@ export function dryRun(rows: ImportRow[], headers: string[], ctx: ImportContext)
   const unknown = headers.filter((h) => h && !IMPORT_FIELDS.includes(h as never));
   if (unknown.length) warnings.push(`Ignored unrecognised columns: ${unknown.join(", ")}`);
   if (!headers.includes("sku")) blockers.push("No `sku` column — every row must identify a product.");
+
+  /*
+    Say it before the commit, not after.
+
+    Rows without the four Rule 6(1) declarations land in Draft and stay off the
+    storefront. That is correct — inventing an MRP is the offence the rule
+    exists to punish — but discovering it from an empty catalogue an hour later
+    is not. Which columns are missing is more useful than how many rows.
+  */
+  const missing = RULE6_GATED.filter((f) => !headers.includes(f));
+  const drafts = rows.filter((r) => !rule6Complete(r)).length;
+  if (drafts) {
+    warnings.push(
+      `${drafts.toLocaleString()} row${drafts === 1 ? "" : "s"} will land as Draft and stay off the storefront — ` +
+        `Legal Metrology Rule 6(1) needs ${RULE6_GATED.join(", ")} before a product can go Active` +
+        (missing.length ? `. This sheet has no ${missing.join(", ")} column${missing.length === 1 ? "" : "s"}.` : "."),
+    );
+  }
 
   for (const row of rows) {
     const sku = (row.sku ?? "").trim().toUpperCase();

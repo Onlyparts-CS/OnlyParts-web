@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { parseCsv, dryRun, ORIGINS, IMPORT_FIELDS, specsOf } from "./import.ts";
+import { parseCsv, dryRun, ORIGINS, IMPORT_FIELDS, specsOf, rule6Complete, RULE6_GATED } from "./import.ts";
 import { SCHEMAS, UNIVERSAL } from "./taxonomy.ts";
 
 /**
@@ -134,6 +134,52 @@ const errs = (extra: Record<string, string> = {}) => {
 /* ...and stay optional, because 116,719 supplier rows arrive without them */
 {
   assert.deepEqual(errs({}), [], "Rule 6 fields must not block an import");
+}
+
+/*
+  A row without the four declarations is a Draft, not an error — and the dry run
+  has to say so before the operator commits.
+
+  The importer used to create every row `status: "active"`, which the collection
+  gate then rejected. 2,150 of 3,800 rows failed on a real feed with a raw
+  Payload field error, after the commit, with nothing written.
+*/
+{
+  const full = {
+    mrp: "150", net_quantity: "1 piece",
+    importer_name: "OnlyParts", importer_address: "Bengaluru, Karnataka, India",
+  };
+  assert.equal(rule6Complete({ ...base, ...full } as never), true, "all four present -> Active");
+
+  for (const drop of RULE6_GATED) {
+    const partial = { ...full, [drop]: "" };
+    assert.equal(
+      rule6Complete({ ...base, ...partial } as never), false,
+      `missing ${drop} must hold the row in Draft rather than fail the write`,
+    );
+  }
+
+  const warn = (extra: Record<string, string>) => {
+    const row = { ...base, ...extra };
+    const headers = Object.keys(row);
+    const csv = `${headers.join(",")}\n${headers.map((h) => row[h]).join(",")}\n`;
+    const parsed = parseCsv(csv);
+    return dryRun(parsed.rows, parsed.headers, ctx).warnings;
+  };
+
+  const bare = warn({});
+  assert.ok(
+    bare.some((w) => /will land as Draft/.test(w)),
+    `the dry run must warn about drafts before the commit, got ${JSON.stringify(bare)}`,
+  );
+  assert.ok(
+    bare.some((w) => /no mrp, net_quantity, importer_name, importer_address column/.test(w)),
+    "and name the columns the sheet is missing",
+  );
+  assert.ok(
+    !warn(full).some((w) => /will land as Draft/.test(w)),
+    "a complete sheet must not be warned at",
+  );
 }
 
 /* an origin off the list splits the 10A facet — reject it at the row */

@@ -7,6 +7,7 @@ import {
   parseCsv,
   dryRun,
   specsOf,
+  rule6Complete,
   parseProjects,
   type DryRun,
   type ImportContext,
@@ -377,7 +378,21 @@ async function createRow(
       primaryCategory: category.id,
       hsnCode: row.hsn.trim(),
       gstRate: (row.gst_rate ?? "").trim() || "18",
-      status: "active",
+      /*
+        Rule 6(1) gates going Active, not being saved — `Products.ts` says so
+        in as many words: "letting it land as drafts to be completed".
+
+        Hardcoding "active" made that documented path unreachable. The first
+        real feed import failed 2,150 of 3,800 rows on `Mrp, Net Quantity,
+        Importer Name, Importer Address` — four declarations no supplier
+        publishes and the CSV writer deliberately does not emit. Every one of
+        those rows was a valid product the operator wanted and could not have.
+
+        A row that carries all four goes live; the rest wait in Draft for a
+        human. Filling them in from a formula here would be inventing a legal
+        declaration, which is the offence the rule exists to punish.
+      */
+      status: rule6Complete(row) ? "active" : "draft",
     } as never,
   });
 
