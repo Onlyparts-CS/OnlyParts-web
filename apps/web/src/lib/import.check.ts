@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { parseCsv, dryRun, ORIGINS } from "./import.ts";
+import { parseCsv, dryRun, ORIGINS, IMPORT_FIELDS, specsOf } from "./import.ts";
+import { SCHEMAS, UNIVERSAL } from "./taxonomy.ts";
 
 /**
  * Run: `node src/lib/import.check.ts` from `apps/web`.
@@ -156,6 +157,42 @@ const errs = (extra: Record<string, string> = {}) => {
 {
   const e = errs({ mrp: "abc" });
   assert.ok(e.some((x: string) => /mrp: "abc" is not a number/.test(x)), JSON.stringify(e));
+}
+
+/*
+  Every spec column the importer accepts must be declared by some attribute
+  definition, or the value is discarded without a word.
+
+  `toSpecRows` emits a row only where `resolveAttributes` returned a definition
+  with that key. A column in `IMPORT_FIELDS` that no `AttrDef` declares passes
+  the dry run, shows in the diff, commits — and lands nowhere. That is how
+  `compatibility` came to be parsed out of 840 supplier listings, written to
+  the CSV, and then thrown away on import, with `worksWith` left permanently
+  unable to match on a platform token because the column reached the database
+  empty every time.
+
+  `UNIVERSAL` is the floor here: it is seeded on every L1 drawer and inherited,
+  so this assertion is really "the floor covers what the importer accepts".
+*/
+{
+  const declared = new Set([
+    ...UNIVERSAL.map((a) => a.key),
+    ...Object.values(SCHEMAS).flatMap((defs) => defs.map((d) => d.key)),
+  ]);
+
+  // Whatever `specsOf` keeps out of a full row is exactly the set that needs a
+  // definition — derived rather than re-listed, so a new column is covered the
+  // day it is added instead of the day someone remembers this file.
+  const specKeys = Object.keys(
+    specsOf(Object.fromEntries(IMPORT_FIELDS.map((f) => [f, "x"]))),
+  );
+  const orphans = specKeys.filter((k) => !declared.has(k));
+
+  assert.deepEqual(
+    orphans, [],
+    `these import columns resolve to no attribute definition and would be silently dropped: ${orphans.join(", ")}`,
+  );
+  assert.ok(specKeys.includes("compatibility"), "compatibility must be a spec, not a core field");
 }
 
 console.log("import.check.ts — Rule 6(1) assertions passed");

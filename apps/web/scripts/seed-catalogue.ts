@@ -1,7 +1,7 @@
 import { getPayload } from "payload";
 import config from "@payload-config";
 import { CATEGORIES } from "../src/lib/catalog";
-import { SCHEMAS, slugify } from "../src/lib/taxonomy";
+import { SCHEMAS, UNIVERSAL, slugify, type AttrDef } from "../src/lib/taxonomy";
 import { allSkus } from "../src/lib/skus";
 import { familyTitle, variantSuffix, weightFor } from "./seedHelpers";
 
@@ -154,12 +154,33 @@ async function main() {
   // 4. Seed Attribute Definitions
   console.log("⚙️  Seeding Attribute Definitions...");
   let attrCount = 0;
+
+  /*
+    Root first, leaves second, and the order matters.
+
+    `resolveAttributes` merges a category's ancestry root → leaf and lets the
+    nearer declaration win, so seeding `UNIVERSAL` on every L1 drawer gives
+    every category in the tree a definition for the generic descriptors the
+    feed harvests, and the seven curated leaves in `SCHEMAS` still override
+    `thread` and `length_mm` with their chip and range facets.
+
+    Without the root pass the importer silently discarded 86.6% of every typed
+    spec it had just validated — `toSpecRows` emits nothing for a key no
+    definition claims, and nothing anywhere logs that it dropped one.
+  */
+  const attrTargets: [string | number, AttrDef[]][] = [];
+  for (const l1 of CATEGORIES) {
+    const id = leafMap.get(l1.slug);
+    if (id) attrTargets.push([id, UNIVERSAL]);
+  }
   for (const [key, attrs] of Object.entries(SCHEMAS)) {
     // SCHEMAS is keyed by leaf slug; find the one path that ends in it.
     const path = [...leafMap.keys()].find((k) => k === key || k.endsWith(`.${key}`));
     const categoryId = path ? leafMap.get(path) : undefined;
-    if (!categoryId) continue;
+    if (categoryId) attrTargets.push([categoryId, attrs]);
+  }
 
+  for (const [categoryId, attrs] of attrTargets) {
     for (const attr of attrs) {
       /*
         The storefront's `AttrDef` and the collection's schema are not the same
@@ -187,7 +208,10 @@ async function main() {
           unit: attr.unit ?? null,
           facetStyle: attr.facet === "range" ? "range" : "checkbox",
           enumValues: isEnum ? values : [],
-          isFacet: true,
+          // `none` still records the value; it just declines to build a rail
+          // out of it. An inherited `dia_mm` covers 8% of a drawer, and a range
+          // slider that hides the other 92% is worse than no slider.
+          isFacet: attr.facet !== "none",
           isSearchable: true,
           // A defining spec — thread, bore, material. These are what the facet
           // rail is built from, so a variant missing one is genuinely incomplete.

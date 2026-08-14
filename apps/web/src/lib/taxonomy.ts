@@ -22,12 +22,57 @@ export type AttrDef = {
   label: string;
   unit?: string;
   type: "enum" | "number";
-  /** chips keep engineering order (M2 before M10); checkbox is alphabetical */
-  facet: "chips" | "checkbox" | "range";
+  /**
+   * chips keep engineering order (M2 before M10); checkbox is alphabetical;
+   * `none` records the value and builds no facet from it — either because
+   * almost every value is a singleton (`compatibility`), or because coverage is
+   * too thin to filter on and a rail that hides 92% of a drawer's stock is
+   * worse than no rail.
+   */
+  facet: "chips" | "checkbox" | "range" | "none";
   order?: (string | number)[];
 };
 
 const THREAD_ORDER = ["M1.6", "M2", "M2.5", "M3", "M4", "M5", "M6", "M8", "M10", "M12"];
+
+/**
+ * Declared on every L1 drawer and inherited by everything under it.
+ *
+ * `resolveAttributes` merges definitions root → leaf and lets the nearer one
+ * win, so a leaf in `SCHEMAS` still upgrades `thread` to a curated chip facet;
+ * these are the floor, not a competing declaration.
+ *
+ * They exist because the importer drops silently. `toSpecRows` emits a row
+ * only where a definition with that key resolves for the category, so before
+ * this, 86.6% of every typed spec the feed harvested — 676 materials, 285
+ * diameters, all 72 compatibility declarations in a 3,800-row sample — was
+ * parsed, validated, written to the CSV and then discarded on import with no
+ * warning, because only seven leaves had ever declared an attribute.
+ *
+ * Every key here is a generic physical descriptor: a length is a length
+ * whether it is on a bolt or a heat-shrink sleeve. Nothing leaf-specific
+ * belongs in this list — that is what `SCHEMAS` is for.
+ */
+export const UNIVERSAL: AttrDef[] = [
+  // The one that pairs a part with the parts that complete it. Free text,
+  // pipe-separated, as the supplier declared it — never a facet, because
+  // "Hakko 900M series soldering irons" is a filter with one member.
+  { key: "compatibility", label: "Declared for", type: "enum", facet: "none" },
+
+  { key: "material", label: "Material", type: "enum", facet: "checkbox" },
+  { key: "finish", label: "Finish", type: "enum", facet: "checkbox" },
+  { key: "coating", label: "Coating", type: "enum", facet: "none" },
+  { key: "grade", label: "Grade", type: "enum", facet: "checkbox" },
+  { key: "thread", label: "Thread", type: "enum", facet: "none" },
+
+  { key: "length_mm", label: "Length", unit: "mm", type: "number", facet: "none" },
+  { key: "dia_mm", label: "Diameter", unit: "mm", type: "number", facet: "none" },
+  { key: "bore_id_mm", label: "Bore (ID)", unit: "mm", type: "number", facet: "none" },
+  { key: "outer_od_mm", label: "Outer (OD)", unit: "mm", type: "number", facet: "none" },
+  { key: "width_mm", label: "Width", unit: "mm", type: "number", facet: "none" },
+  { key: "thickness_mm", label: "Thickness", unit: "mm", type: "number", facet: "none" },
+  { key: "shaft_dia_mm", label: "Shaft diameter", unit: "mm", type: "number", facet: "none" },
+];
 
 export const SCHEMAS: Record<string, AttrDef[]> = {
   "socket-head-cap": [
