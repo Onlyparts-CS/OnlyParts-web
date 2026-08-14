@@ -17,3 +17,11 @@ tools/feeds/out/
 # path and content hash for every one of them. The lockfile is the thing worth
 # versioning, not its expansion. `.agents/AGENTS.md` is hand-written and stays.
 .agents/skills/
+
+# Security scan output. SARIF is a point-in-time report with file and line
+# locations for every finding — regenerate it, don't version it.
+snyk-code-report.json
+*.sarif
+
+# Stray downloads. The repo root is not a scratch directory.
+/ChatGPT Image*.png
