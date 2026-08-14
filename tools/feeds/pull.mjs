@@ -509,12 +509,13 @@ function originFrom(specs) {
  * sits above `originFrom`.
  * ------------------------------------------------------------------ */
 
-// `country_of_origin` carries the ~90 rows a supplier happened to state. The
-// other four Rule 6(1) columns the importer understands are not emitted: the
-// crawl has no source for them, and an empty column on 119,864 rows is noise.
+// `country_of_origin` carries the ~90 rows a supplier happened to state and is
+// never defaulted — an absent declaration is an omission, a wrong one is a
+// misdeclaration, and Rule 6(1) punishes the second. The other four are ours to
+// declare rather than the supplier's to publish; see `rule6Columns` below.
 const CSV_COLS = [
   "sku", "title", "price", "stock", "hsn", "gst_rate", "weight_g", "category", "projects",
-  "country_of_origin",
+  "country_of_origin", "mrp", "net_quantity", "importer_name", "importer_address",
   // Typed spec columns, populated only where `typedSpecs` could prove the
   // mapping. Mostly blank across the whole feed, and that is the honest state:
   // no supplier publishes a structured attribute table.
@@ -526,6 +527,49 @@ const cell = (v) => {
   const s = String(v ?? "");
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
+
+/** Who packs the goods. Ours to state, not something a supplier feed carries. */
+const PACKER = { name: "OnlyParts", address: "Bengaluru, Karnataka, India" };
+
+/**
+ * "pack of 25" -> "25 pieces". A unit we cannot count -> blank, on purpose.
+ *
+ * A quantity printed in the supplier's own title is the supplier's declaration
+ * and reading it is not inventing one. Defaulting everything to "1 piece"
+ * would be: a listing titled "pack of 100" declared as a single piece is a
+ * short-measure misdeclaration, which is the offence Rule 6(1) is about.
+ *
+ * Blank holds the row in Draft, which is the correct answer to "we do not know
+ * how much is in the box".
+ */
+function netQuantity(title) {
+  const t = String(title ?? "");
+  const n = t.match(/\b(?:pack|set|lot|box|bag|kit)\s+of\s+(\d{1,4})\b/i)
+    ?? t.match(/\b(\d{1,4})\s*(?:pcs|pieces|nos)\b/i);
+  if (n) {
+    const q = Number(n[1]);
+    if (q > 0 && q <= 10000) return `${q} ${q === 1 ? "piece" : "pieces"}`;
+  }
+  // Sold by length, weight or volume — the number on the pack is not a count,
+  // and guessing the unit is how a roll becomes a piece.
+  if (/\b(metre|meter|mtr|\dm\b|roll|reel|spool|per\s*kg|\dkg\b|litre|liter|\dml\b|sheet|coil)\b/i.test(t)) return "";
+  return "1 piece";
+}
+
+/**
+ * Rule 6(1) declarations that gate going Active.
+ *
+ * MRP is the maximum *we* will retail at, and we are the packer — so declaring
+ * it equal to our own list price is our declaration to make, and it is one we
+ * cannot then breach. That is categorically different from `country_of_origin`,
+ * which is a fact about the world that we would be guessing at.
+ */
+const rule6Columns = (row) => ({
+  mrp: row.price || "",
+  net_quantity: netQuantity(row.title),
+  importer_name: PACKER.name,
+  importer_address: PACKER.address,
+});
 
 function toCsv(rows) {
   return [CSV_COLS.join(","), ...rows.map((r) => CSV_COLS.map((c) => cell(r[c])).join(","))].join("\n");
@@ -838,16 +882,62 @@ function selfCheck() {
     header, find the column, and check the value is in it. A rename on either
     side breaks it.
   */
+  /*
+    Net quantity is a measured declaration, so a wrong one is short measure.
+    "1 piece" is only safe where nothing in the title says otherwise.
+  */
+  const qtyCases = [
+    ["M3 Hex Nut", "1 piece", "a loose part is one piece"],
+    ["Neodymium Disc Magnet (pack of 10)", "10 pieces", "the supplier printed the count"],
+    ["Jumper Wires Set of 40", "40 pieces", "set of, too"],
+    ["Heat Shrink Tube 100 pcs", "100 pieces", "and the bare count"],
+    ["Resistor Kit of 1", "1 piece", "singular stays singular"],
+    ["PLA Filament 1.75mm 1kg Spool", "", "sold by weight on a spool — not a count"],
+    ["Silicone Wire 5 metre roll", "", "sold by length"],
+    ["Copper Sheet 200x300mm", "", "sold as sheet"],
+    ["Solder Wire 100g reel", "", "reel"],
+  ];
+  for (const [title, want, why] of qtyCases) {
+    const got = netQuantity(title);
+    if (got !== want) {
+      console.error(`  ✗ ${why}\n      ${title}\n      want ${want || "(blank)"} · got ${got || "(blank)"}`);
+      failed++;
+    }
+  }
+
   const shapeCases = [
     ["country_of_origin", "India", { specs: { "Country of Origin": "India" } }],
+    ["mrp", "199", { price: "199" }],
+    ["importer_name", "OnlyParts", {}],
+    ["net_quantity", "1 piece", {}],
     ["compatibility", "Arduino UNO", { specs: { Compatibility: "Arduino UNO" } }],
     ["thread", "M6", { specs: { "Thread Size": "M6" } }],
     ["hsn", "", { specs: {} }],
   ];
+  // Splitting on "," would be the very bug this block exists to catch:
+  // `importer_address` is quoted and contains two commas, so a naive split
+  // shifts every column after it and reports the wrong cell as wrong.
+  const cells = (line) => {
+    const out = [];
+    let f = "", q = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (q) {
+        if (c !== '"') f += c;
+        else if (line[i + 1] === '"') { f += '"'; i++; }
+        else q = false;
+      } else if (c === '"') q = true;
+      else if (c === ",") { out.push(f); f = ""; }
+      else f += c;
+    }
+    out.push(f);
+    return out;
+  };
+
   for (const [column, want, row] of shapeCases) {
     const [head, line] = toCsv([enrich({ sku: "X", title: "test part", ...row })]).split("\n");
-    const at = head.split(",").indexOf(column);
-    const got = at < 0 ? "(no such column)" : (line.split(",")[at] ?? "");
+    const at = cells(head).indexOf(column);
+    const got = at < 0 ? "(no such column)" : (cells(line)[at] ?? "");
     // `hsn` carries no expectation beyond "the column exists" — an unmapped
     // row genuinely has none, and asserting a value would pin the map.
     if (at < 0 || (want && got !== want)) {
@@ -858,7 +948,7 @@ function selfCheck() {
 
   const total =
     cases.length + parkCases.length + resolveCases.length + projectCases.length +
-    originCases.length + specCases.length + shapeCases.length;
+    originCases.length + specCases.length + qtyCases.length + shapeCases.length;
   console.log(failed ? `\n${failed}/${total} failed` : `${total}/${total} passed`);
   process.exit(failed ? 1 : 0);
 }
@@ -910,6 +1000,7 @@ function enrich(row) {
       blank. `csvShape()` in the self-check now fails if that drifts again.
     */
     country_of_origin: row.countryOfOrigin || originFrom(row.specs),
+    ...rule6Columns(row),
     /*
       76% of harvested rows carry a spec block and the CSV used to emit none of
       it, so every imported part landed with an empty spec table. Only the
