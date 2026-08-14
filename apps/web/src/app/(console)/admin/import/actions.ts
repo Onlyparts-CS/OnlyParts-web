@@ -393,6 +393,24 @@ async function createRow(
         declaration, which is the offence the rule exists to punish.
       */
       status: rule6Complete(row) ? "active" : "draft",
+      /*
+        And the declarations themselves, which nothing here ever wrote.
+
+        They sit in `IMPORT_FIELDS` so the dry run accepts the columns, and in
+        `CORE_FIELDS` so `specsOf` keeps them out of the spec rows — and then
+        fell down the gap between the two. The values were parsed, validated,
+        shown in the diff, and dropped.
+
+        Invisible while `status` was hardcoded to "active", because the gate
+        rejected every row for the same fields either way. The moment status
+        followed the data, it inverted: 3,501 rows asked to go Active carrying
+        declarations the product was never given, and all 3,501 were refused.
+      */
+      countryOfOrigin: row.country_of_origin?.trim() || null,
+      mrp: row.mrp?.trim() ? toPaise(row.mrp) : null,
+      netQuantity: row.net_quantity?.trim() || null,
+      importerName: row.importer_name?.trim() || null,
+      importerAddress: row.importer_address?.trim() || null,
     } as never,
   });
 
