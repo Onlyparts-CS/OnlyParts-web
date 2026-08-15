@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Frame } from "@/components/Frame";
 import type { GlyphKey } from "@/lib/types";
 import { Rule } from "@/components/Rule";
+import { SpecDrawing } from "./SpecDrawing";
+import { specDrawing } from "@/lib/specDrawing";
 
 /**
  * PDP gallery.
@@ -43,20 +45,39 @@ export function Gallery({
   */
   const shot = (role: string) => images.find((m) => m.role === role);
 
+  /*
+    The drawing slot is the one slot we can fill ourselves.
+
+    An uploaded drawing still wins — a manufacturer's own dimensioned sheet is
+    better than anything derived from our attribute row. Below that, a
+    generated sheet beats the plate, because the slot is labelled "Drawing" and
+    a silhouette is not one. Below *that* (a part we hold no attributes for)
+    `specDrawing` reports empty and the plate stays, rather than printing a
+    frame with nothing in it.
+  */
+  const generated = !specDrawing(attrs).empty;
+  const isGenerated = (role: string) => role === "drawing" && !shot("drawing") && generated;
+
   return (
     <div>
       <div className="group relative overflow-hidden border border-ink-900 bg-surface">
-        <Frame
-          ratio="1/1"
-          glyph={glyph}
-          part={part}
-          cell={7}
-          src={shot(SLOTS[active].role)?.url}
-          alt={shot(SLOTS[active].role)?.alt}
-          label={`${sku} · ${SLOTS[active].label}`}
-          sizes="(max-width: 1024px) 100vw, 42vw"
-          priority
-        />
+        {isGenerated(SLOTS[active].role) ? (
+          <div className="relative aspect-square">
+            <SpecDrawing sku={sku} attrs={attrs} />
+          </div>
+        ) : (
+          <Frame
+            ratio="1/1"
+            glyph={glyph}
+            part={part}
+            cell={7}
+            src={shot(SLOTS[active].role)?.url}
+            alt={shot(SLOTS[active].role)?.alt}
+            label={`${sku} · ${SLOTS[active].label}`}
+            sizes="(max-width: 1024px) 100vw, 42vw"
+            priority
+          />
+        )}
         <span className="bin absolute left-3 top-3">{SLOTS[active].label}</span>
         {/* registration marks — where the two plates line up */}
         <span aria-hidden className="pointer-events-none absolute left-2 top-2 size-4 border-l border-t border-spot-600" />
@@ -76,8 +97,14 @@ export function Gallery({
               i === active ? "border-spot-600" : "border-line hover:border-ink-400"
             }`}
           >
-            <Frame ratio="1/1" glyph={glyph} part={part} cell={4} tone="neutral" sizes="120px"
-              src={shot(s.role)?.url} alt={shot(s.role)?.alt} />
+            {isGenerated(s.role) ? (
+              <div className="relative aspect-square">
+                <SpecDrawing sku={sku} attrs={attrs} />
+              </div>
+            ) : (
+              <Frame ratio="1/1" glyph={glyph} part={part} cell={4} tone="neutral" sizes="120px"
+                src={shot(s.role)?.url} alt={shot(s.role)?.alt} />
+            )}
           </button>
         ))}
       </div>
