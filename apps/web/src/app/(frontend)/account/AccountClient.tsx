@@ -416,15 +416,14 @@ function DataSection() {
       </div>
 
       {/*
-        No delete button. Two reasons, and neither is that it was forgotten —
-        saying so is more use than a control that would fail.
+        No delete button yet. The reason is retention law, not effort — saying
+        so is more use than a control that would half-work.
       */}
       <p className="mt-4 border-t border-line pt-3 text-[0.75rem] leading-relaxed text-faint">
-        Deletion is handled by request rather than by a button, for two reasons. A tax
-        invoice must be kept for six years under GST, so an order can be anonymised but
-        never removed. And sign-in here is still a prototype that accepts any six
-        digits, which is not an identity anyone should be allowed to erase an account
-        against. Email{" "}
+        Deletion is handled by request rather than by a button. A tax invoice must be
+        kept for six years under GST, so an order can be anonymised but never removed,
+        and that partial erasure is not something a single button should silently
+        decide on your behalf. Email{" "}
         <a href="mailto:privacy@onlyparts.in" className="text-spot-700 hover:underline">
           privacy@onlyparts.in
         </a>{" "}

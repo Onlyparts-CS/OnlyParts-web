@@ -16,12 +16,12 @@ import { myOrders } from "@/lib/orderRead";
  * cookie, so an export can only ever contain orders the caller already has the
  * right to read.
  *
- * **Deletion is deliberately not here.** Two reasons, and neither is effort:
- * a tax invoice must be retained for six years under GST, so orders can be
- * anonymised but never deleted; and sign-in is still a prototype that accepts
- * any six digits, so there is no identity to authorise an erasure against.
- * Implementing it now would mean building a destructive operation on top of an
- * authentication check that does not exist.
+ * **Deletion is deliberately not here.** A tax invoice must be retained for
+ * six years under GST, so orders can be anonymised but never deleted — an
+ * erasure here is always partial, and which fields survive is a legal call
+ * rather than a button. Identity is no longer the blocker: `customerSession`
+ * plus the Google flow give a verified `sub` to authorise against, so when
+ * this is built it can be built properly.
  */
 export async function exportMyOrders(): Promise<{ orders: unknown[]; generatedAt: string }> {
   const orders = await myOrders();
