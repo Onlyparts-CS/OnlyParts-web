@@ -8,6 +8,28 @@ import { CATEGORIES } from "./catalog";
 import { imageUrl } from "./import";
 
 /**
+ * Whether a supplier's photograph may be shown, as opposed to merely stored.
+ *
+ * 3,800 of 3,807 imported rows carry an image URL, and none of them is ours.
+ * 1,108 are `cdn.shopify.com` — a competitor's own storefront photography,
+ * their logo and an "x 25pcs" overlay burned into the frame, which also
+ * misstates the pack size we sell. The remaining 2,692 are a distributor's S3
+ * and are only usable with a written grant we do not hold. `Media.licence`
+ * offers `owned | supplier | pd | cc0` and there is no value that fits either
+ * set: the schema was telling us this before anyone asked.
+ *
+ * So this gates *display*, not storage. The importer keeps writing
+ * `sourceImageUrl` and the column keeps its data, because the day a grant
+ * arrives the flag is what changes, not a re-crawl of 119,864 rows.
+ *
+ * **Absent means off.** A deployment that forgets this variable ships plates
+ * and generated drawings, which is legal and looks deliberate. The opposite
+ * default ships infringement on a missing env var, and the failure is silent —
+ * the pages look *better* when it goes wrong, so nobody reports it.
+ */
+const HOTLINKS_ALLOWED = process.env.ALLOW_HOTLINKED_IMAGES === "true";
+
+/**
  * The catalogue, read from Postgres.
  *
  * `skus.ts` says of its own generated data: "swapping this for a Postgres query
@@ -252,9 +274,9 @@ function toSku(v: VariantRow, ctx: Ctx): Sku | null {
   // the gallery, and the PDP maps role onto its four named slots.
   const shots = ctx.mediaByProduct.get(String(product.id)) ?? [];
   const hero = shots.find((m) => m.role === "hero") ?? shots[0];
-  const sourceImage = imageUrl(
-    typeof product.sourceImageUrl === "string" ? product.sourceImageUrl : undefined,
-  );
+  const sourceImage = HOTLINKS_ALLOWED
+    ? imageUrl(typeof product.sourceImageUrl === "string" ? product.sourceImageUrl : undefined)
+    : "";
 
   return {
     sku: v.sku,
