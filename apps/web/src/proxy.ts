@@ -48,16 +48,17 @@ const SESSION_COOKIE = "payload-token";
  * blocked every script on the payment page. HTTP 200 the whole way; only
  * counting nonces in the HTML shows it.
  *
- * `/checkout`, `/cart` and `/track` therefore stay on the `next.config.ts`
- * policy for now. They are `"use client"` pages, and route segment config is
- * not allowed in a client component, so opting them into dynamic rendering
- * means giving each a server shell first. That is the next piece of work
- * here — a payment page should not be a cached static shell regardless of CSP.
+ * `/checkout`, `/cart` and `/track` now satisfy both halves. Each was a bare
+ * `"use client"` page, and route segment config is not allowed in a client
+ * component, so each got a server shell whose only job is to hold
+ * `dynamic = "force-dynamic"`. They are on the strict list below — a payment
+ * page should not have been a cached static shell regardless of CSP.
  */
 const STRICT = [
   "/admin", "/cms",              // staff consoles
   "/account",                    // a buyer's own personal data
   "/orders", "/rfqs",            // a buyer's own records
+  "/cart", "/checkout", "/track", // money, an address, and someone's order number
 ];
 
 const isStrict = (path: string) =>
