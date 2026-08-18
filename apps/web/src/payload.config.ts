@@ -17,6 +17,7 @@ import { Inventory, InventoryMovements, Warehouses } from "./collections/Invento
 import { Customers } from "./collections/Customers";
 import { Orders } from "./collections/Orders";
 import { SearchQueries } from "./collections/SearchQueries";
+import { PageViews } from "./collections/PageViews";
 import { ImportBatches } from "./collections/ImportBatches";
 import { ImportExceptions } from "./collections/ImportExceptions";
 
@@ -70,6 +71,7 @@ export default buildConfig({
     Customers,
     Orders,
     SearchQueries,
+    PageViews,
     // Platform
     Media,
     Users,

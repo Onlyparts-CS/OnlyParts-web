@@ -17,7 +17,7 @@ import { myOrders } from "@/lib/orderRead";
  * right to read.
  *
  * **Deletion is deliberately not here.** A tax invoice must be retained for
- * six years under GST, so orders can be anonymised but never deleted — an
+ * 8 years, so orders can be anonymised but never deleted — an
  * erasure here is always partial, and which fields survive is a legal call
  * rather than a button. Identity is no longer the blocker: `customerSession`
  * plus the Google flow give a verified `sub` to authorise against, so when

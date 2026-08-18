@@ -421,7 +421,7 @@ function DataSection() {
       */}
       <p className="mt-4 border-t border-line pt-3 text-[0.75rem] leading-relaxed text-faint">
         Deletion is handled by request rather than by a button. A tax invoice must be
-        kept for six years under GST, so an order can be anonymised but never removed,
+        kept for 8 years, so an order can be anonymised but never removed,
         and that partial erasure is not something a single button should silently
         decide on your behalf. Email{" "}
         <a href="mailto:privacy@onlyparts.in" className="text-spot-700 hover:underline">
