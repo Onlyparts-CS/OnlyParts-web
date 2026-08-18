@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { worksWith, substitutes, compatTokens, complementDrawers, bulkTier } from "./product.ts";
+import { worksWith, substitutes, compatTokens, complementDrawers, bulkTier, buildMatrix } from "./product.ts";
 import type { Sku } from "./skus.ts";
 
 /**
@@ -206,6 +206,37 @@ const cat = (path: string) => [path.split(".")];
     breaks: [{ qty: 1, price: 10000 }, { qty: 25, price: 8000 }],
   });
   assert.equal(bulkTier(shallow)?.qty, 25, "with no 100 rung, take the deepest that exists");
+}
+
+
+
+/* the picker never offers `undefined` as a size
+
+   7,709 of 9,972 imported variants carry no structured attribute, and
+   `String(undefined)` is the string "undefined". It used to become a
+   legitimate axis value: "THREAD undefined" over a chip reading `undefined`,
+   linking to whichever sibling did hold the attribute as though it were the
+   same part in another length. */
+{
+  const leaf = "fasteners.screws.pan-head";
+  const full = part({ categories: cat(leaf), attrs: { thread: "M3", length_mm: 10, material: "SS 304" } });
+  const longer = part({ categories: cat(leaf), attrs: { thread: "M3", length_mm: 20, material: "SS 304" } });
+  const bare = part({ categories: cat(leaf) });
+
+  const { axes } = buildMatrix(full, [full, longer, bare]);
+  const values = axes.flatMap((a) => a.options.map((o) => o.value));
+  assert.ok(values.length > 0, "a part with attributes still gets a picker");
+  assert.ok(!values.includes("undefined"), "a sibling with no attribute must not become an option");
+  assert.deepEqual(
+    axes.find((a) => a.key === "length_mm")?.options.map((o) => o.value),
+    ["10", "20"],
+    "only the siblings that hold the attribute are offered",
+  );
+
+  /* and the part we hold nothing for gets no picker at all, rather than one
+     that cannot say what you are currently holding */
+  assert.deepEqual(buildMatrix(bare, [full, longer, bare]).axes, [],
+    "a part with no attributes has no axis to pick along");
 }
 
 console.log("product.check.ts — ok");
