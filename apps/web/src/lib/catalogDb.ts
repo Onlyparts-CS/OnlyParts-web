@@ -344,7 +344,6 @@ function toSku(v: VariantRow, ctx: Ctx): Sku | null {
     */
     rating: 0,
     ratingCount: 0,
-    hasDatasheet: Boolean(product.datasheet),
   };
 }
 

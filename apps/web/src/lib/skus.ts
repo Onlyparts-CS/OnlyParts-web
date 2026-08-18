@@ -72,7 +72,6 @@ export type Sku = {
   };
   rating: number;
   ratingCount: number;
-  hasDatasheet: boolean;
 };
 
 /* deterministic pseudo-random so SSR and client agree */
@@ -193,7 +192,6 @@ function screws(): Sku[] {
             projects: screwProjects(th.t, len),
             rating: 4.4 + Math.round(r() * 6) / 10,
             ratingCount: Math.round(4 + r() * 180),
-            hasDatasheet: true,
           });
         }
       }
@@ -250,7 +248,6 @@ function bearings(): Sku[] {
           projects: b.id <= 8 ? ["3d-printer", "robot"] : ["cnc", "robot"],
           rating: 4.3 + Math.round(r() * 7) / 10,
           ratingCount: Math.round(3 + r() * 120),
-          hasDatasheet: true,
         });
       }
     }
@@ -289,7 +286,6 @@ function magnets(): Sku[] {
           categories: [["magnets", "neodymium-ndfeb", "disc"]],
           rating: 4.5 + Math.round(r() * 5) / 10,
           ratingCount: Math.round(2 + r() * 90),
-          hasDatasheet: false,
         });
       }
     }
@@ -330,7 +326,6 @@ function steppers(): Sku[] {
         projects: ["3d-printer", "cnc", "robot"],
         rating: 4.5 + Math.round(r() * 5) / 10,
         ratingCount: Math.round(6 + r() * 140),
-        hasDatasheet: true,
       });
     }
   }

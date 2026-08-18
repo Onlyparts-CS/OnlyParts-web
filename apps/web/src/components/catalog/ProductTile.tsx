@@ -31,13 +31,6 @@ export function ProductTile({ sku }: { sku: Sku }) {
         <Frame ratio="1/1" glyph={sku.glyph} part={sku} cell={4}
           src={sku.image?.url} alt={sku.image?.alt}
           sizes="(max-width:640px) 50vw, (max-width:1280px) 25vw, 16vw" />
-        <span className="absolute left-2 top-2 flex items-center gap-1">
-          {sku.hasDatasheet && (
-            <span className="border border-line bg-surface/90 px-1.5 py-0.5 font-mono text-[0.5625rem] text-faint">
-              PDF
-            </span>
-          )}
-        </span>
         <span className="absolute bottom-2 right-2">
           <WishButton sku={sku.sku} title={sku.title} />
         </span>
