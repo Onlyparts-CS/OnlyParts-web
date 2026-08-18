@@ -10,11 +10,12 @@ import { specDrawing } from "@/lib/specDrawing";
 /**
  * PDP gallery.
  *
- * Four defined slots, each carrying the shot list in the UI before the
- * photography exists: 3/4 hero, top-down, a scale reference, and the
- * dimensioned drawing. Until a file lands in each, all four screen the same
- * plate — which is honest, and which is why the label says what the slot is
- * *for* rather than pretending the picture is already that view.
+ * Three photographic slots carrying the shot list in the UI before the
+ * photography exists — 3/4 hero, top-down, a scale reference — plus a drawing
+ * slot that only appears when there is a drawing to put in it. Until a file
+ * lands in each photographic slot they screen the same plate, which is honest,
+ * and which is why the label says what the slot is *for* rather than
+ * pretending the picture is already that view.
  */
 const SLOTS = [
   { key: "hero", label: "3/4 view", role: "hero" },
@@ -58,10 +59,23 @@ export function Gallery({
   const generated = !specDrawing(attrs).empty;
   const isGenerated = (role: string) => role === "drawing" && !shot("drawing") && generated;
 
+  /*
+    The drawing slot is dropped, not filled with a plate.
+
+    The other three slots are labelled by what they are *for*, and a screened
+    plate standing in for a photograph we have not taken yet reads as
+    "photography pending". "Drawing" does not work that way: a drawing is
+    something we can either derive or not, and there is no photographer coming.
+    On a part we hold no dimensions for — most of the imported catalogue — the
+    tab promised a dimensioned sheet and delivered the same silhouette as the
+    other three, which is the one slot that was actively lying.
+  */
+  const slots = SLOTS.filter((s) => s.role !== "drawing" || shot("drawing") || generated);
+
   return (
     <div>
       <div className="group relative overflow-hidden border border-ink-900 bg-surface">
-        {isGenerated(SLOTS[active].role) ? (
+        {isGenerated(slots[active].role) ? (
           <div className="relative aspect-square">
             <SpecDrawing sku={sku} attrs={attrs} />
           </div>
@@ -71,22 +85,22 @@ export function Gallery({
             glyph={glyph}
             part={part}
             cell={7}
-            src={shot(SLOTS[active].role)?.url}
-            alt={shot(SLOTS[active].role)?.alt}
-            label={`${sku} · ${SLOTS[active].label}`}
+            src={shot(slots[active].role)?.url}
+            alt={shot(slots[active].role)?.alt}
+            label={`${sku} · ${slots[active].label}`}
             sizes="(max-width: 1024px) 100vw, 42vw"
             priority
           />
         )}
-        <span className="bin absolute left-3 top-3">{SLOTS[active].label}</span>
+        <span className="bin absolute left-3 top-3">{slots[active].label}</span>
         {/* registration marks — where the two plates line up */}
         <span aria-hidden className="pointer-events-none absolute left-2 top-2 size-4 border-l border-t border-spot-600" />
         <span aria-hidden className="pointer-events-none absolute bottom-2 right-2 size-4 border-b border-r border-spot-600" />
         <Rule className="pointer-events-none absolute inset-x-0 bottom-0 w-full" />
       </div>
 
-      <div className="mt-2 grid grid-cols-4 gap-2">
-        {SLOTS.map((s, i) => (
+      <div className={`mt-2 grid gap-2 ${slots.length === 4 ? "grid-cols-4" : "grid-cols-3"}`}>
+        {slots.map((s, i) => (
           <button
             key={s.key}
             onClick={() => setActive(i)}
