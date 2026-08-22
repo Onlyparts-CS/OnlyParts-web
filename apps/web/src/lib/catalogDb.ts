@@ -1,4 +1,5 @@
 import "server-only";
+import { fastener } from "./fastenerStd";
 import { cache } from "react";
 import { getPayload } from "payload";
 import config from "@payload-config";
@@ -260,6 +261,28 @@ function toSku(v: VariantRow, ctx: Ctx): Sku | null {
     if (a.valueNumber !== null && a.valueNumber !== undefined) attrs[key] = a.valueNumber;
     else if (a.valueBool !== null && a.valueBool !== undefined) attrs[key] = String(a.valueBool);
     else if (a.valueText) attrs[key] = a.valueText;
+  }
+
+  /*
+    Thread, recovered from the title when the row does not carry it.
+
+    `thread` is the first axis of every screw picker in `VARIANT_AXES`, and it
+    is populated on 4.9% of fastener rows because Indian Shopify listings do not
+    publish a "Thread Size" spec row — while 69.6% state it in the title. The
+    effect on the page is not a missing spec line, it is a missing *control*:
+    `buildMatrix` drops an axis whose value it cannot read for the part in hand,
+    so a screw with no `thread` offers length and material and no way to change
+    size, on a shelf where size is the thing buyers change.
+
+    Filled only when absent, and only from `fastener()`, which refuses every
+    ambiguous title. This is the listing's own words about its own part — not
+    a figure from a standard — so it needs no provenance mark the way the
+    drawing's head dimensions do.
+  */
+  const bolt = fastener([product.title, v.titleSuffix].filter(Boolean).join(" "), primaryPath);
+  if (bolt) {
+    if (attrs.thread === undefined) attrs.thread = bolt.thread;
+    if (attrs.length_mm === undefined) attrs.length_mm = bolt.length;
   }
 
   // qty 1 is the base price; the collection stores only genuine breaks above it.

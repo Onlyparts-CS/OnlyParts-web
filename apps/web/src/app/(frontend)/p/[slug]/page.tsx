@@ -143,7 +143,14 @@ export default async function ProductPage({ params }: Props) {
 
       {/* ---------- main ---------- */}
       <div className="grid gap-10 lg:grid-cols-[minmax(0,42%)_minmax(0,1fr)] lg:gap-14">
-        <Gallery glyph={sku.glyph} sku={sku.sku} attrs={sku.attrs} images={sku.images} />
+        <Gallery
+          glyph={sku.glyph}
+          sku={sku.sku}
+          attrs={sku.attrs}
+          images={sku.images}
+          title={sku.title}
+          categoryPath={sku.categories[0]?.join(".")}
+        />
 
         <div className="min-w-0">
           <h1 className="text-[clamp(1.375rem,2.4vw,1.875rem)] leading-tight">{sku.title}</h1>
@@ -166,9 +173,19 @@ export default async function ProductPage({ params }: Props) {
             </span>
           </div>
 
-          <div className="mt-7 border-y border-line py-6">
-            <VariantMatrix axes={axes} current={sku} />
-          </div>
+          {/*
+            The rules belong to the picker, not to the space where one might be.
+
+            `VariantMatrix` returns null when there are no axes, but this wrapper
+            drew its border either way — so a part with nothing to pick got an
+            empty ruled band between the stock badge and the price, which reads
+            as a control that failed to load rather than as a part with one size.
+          */}
+          {axes.length > 0 && (
+            <div className="mt-7 border-y border-line py-6">
+              <VariantMatrix axes={axes} current={sku} />
+            </div>
+          )}
 
           <div className="mt-6">
             <BuyBox sku={sku} />

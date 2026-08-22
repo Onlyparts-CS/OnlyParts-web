@@ -13,6 +13,17 @@ export const VARIANT_AXES: Record<string, string[]> = {
   "button-head":     ["thread", "length_mm", "material"],
   "countersunk-csk": ["thread", "length_mm", "material"],
   "pan-head":        ["thread", "length_mm", "material"],
+  /*
+    Filed by drive rather than by head, and left out of this map when it was
+    written — so `buildMatrix` returned no axes and the picker rendered as an
+    empty ruled band. The taxonomy splits screws two ways (`screws-by-head.*`
+    and `screws-by-drive.*`) and only the first branch was covered; 28 products
+    across these four leaves had size chips they could not show.
+  */
+  "flat-slotted":    ["thread", "length_mm", "material"],
+  "cross-phillips":  ["thread", "length_mm", "material"],
+  "cheese-head":     ["thread", "length_mm", "material"],
+  "hex-allen":       ["thread", "length_mm", "material"],
   "deep-groove":     ["bearing_code", "seal_type", "material"],
   disc:              ["grade", "dia_mm", "thickness_mm"],
   "nema-17":         ["body_length_mm", "shaft_dia_mm"],
