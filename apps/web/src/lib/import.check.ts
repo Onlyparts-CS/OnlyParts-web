@@ -282,12 +282,39 @@ const errs = (extra: Record<string, string> = {}) => {
   }
 
   // ...but must not throw away products whose names merely resemble furniture.
+  // The last four are not hypothetical: an unanchored word list rejected every
+  // one of them out of the real harvest. "Sprite" is a Creality extruder line,
+  // and a Pi Zero W photograph is allowed to have the word "Logo" in it.
   for (const real of [
     "https://cdn.shopify.com/s/files/1/x/17mm_Round_Name_Badge_Magnet.png",
     "https://cdn.shopify.com/s/files/1/x/5W_12V_Solar_Panel_Outdoor.jpg",
+    "https://robu-prod-media.s3.ap-south-1.amazonaws.com/uploads/2021/12/Creality-Sermoon-V1-Fully-Assembled-with-Sprite-Direct-Drive-3D-Printer-2.jpg",
+    "https://robu-prod-media.s3.ap-south-1.amazonaws.com/uploads/2024/09/Creality-Sprite-Extruder-Pro-Kit-4.jpg",
+    "https://cdn.shopify.com/s/files/1/x/products/Pi-Zero-W-Logo-1-1620x1080.jpg",
+    "https://robu-prod-media.s3.ap-south-1.amazonaws.com/uploads/2020/09/3-IN-1-Heat-Sink-Set-Bwith-RPI-Logo-1.jpg",
   ]) {
     assert.equal(imageUrl(real), real, `must keep a real product: ${real}`);
   }
+
+  /*
+    The onlyscrews block, by store id.
+
+    Both URLs below are real rows out of the harvest and both are perfectly
+    valid product photographs — the point is that we refuse them anyway,
+    because of who took them. The second assertion is the one that matters:
+    all three Shopify sources share `cdn.shopify.com`, so a block written
+    against the host instead of the store id would take quartzcomponents and
+    robocraze with it and nobody would notice until 638 tiles went blank.
+  */
+  for (const blocked of [
+    "https://cdn.shopify.com/s/files/1/0871/5295/1609/files/Deep_Groove_Ball_Bearing.png?v=1752166211",
+    "https://cdn.shopify.com/s/files/1/0871/5295/1609/files/M6_Rivet_Insert_Nut_SS304.png?v=1727112391",
+  ]) {
+    assert.equal(imageUrl(blocked), "", `must refuse onlyscrews imagery: ${blocked}`);
+  }
+
+  const otherStore = "https://cdn.shopify.com/s/files/1/0300/6424/6919/files/605_2RS_Bearing.jpg";
+  assert.equal(imageUrl(otherStore), otherStore, "the block must not spread to the rest of cdn.shopify.com");
 }
 
 /*
