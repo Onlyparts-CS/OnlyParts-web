@@ -13,11 +13,31 @@
  * origin field follows, for the same reason — an omission is a gap, a wrong
  * figure is a misdeclaration, and a buyer machines to the figure.
  *
+ * **The one exception, added deliberately and fenced.** `fastenerStd.ts` reads
+ * head diameter and head height for a recognised standard screw out of the
+ * standard itself rather than out of this row. That is not the inference this
+ * rule forbids: `dk` for an ISO 4762 M4 is not a measurement anyone takes, it
+ * is what "ISO 4762 M4" *means*, and no supplier publishes it for exactly that
+ * reason. The fence is that identifying the standard must be certain — see the
+ * refusals in that file — and that the sheet names the standard beside the two
+ * figures it supplied, so a reader can tell our reading from the maker's.
+ *
  * Why this rather than a photograph: it is entirely our own work, so it lands
  * in `media.licence = owned` with nobody to ask, and for a fastener or a
  * bearing it is the more useful picture anyway. Nobody buys an M8 × 60 because
  * of how it photographs.
  */
+import { fastener, type Fastener } from "./fastenerStd";
+import { bearing, magnet, type BlockPart, type RoundPart } from "./partGeometry";
+
+/**
+ * A part whose geometry we can actually draw.
+ *
+ * Three producers, one union, because the sheet only ever asks two questions:
+ * which views to draw, and whose figures they are. `standard` on the round and
+ * block members and the fastener's own `standard` answer the second one.
+ */
+export type DrawnPart = Fastener | RoundPart | BlockPart;
 
 /** Suffix → unit. The importer's keys carry their unit in the name. */
 const UNITS: [RegExp, string][] = [
@@ -75,6 +95,23 @@ export type SpecDrawingModel = {
   unit: "mm";
   /** Everything we know, for the title block. */
   rows: { label: string; value: string }[];
+  /**
+   * A part whose real geometry the title stated unambiguously.
+   *
+   * Present means the sheet can draw a profile — a countersunk cone, a bearing
+   * annulus, a block magnet — instead of the envelope rectangle, and can call
+   * out three or four dimensions instead of two. Absent is the ordinary case
+   * for most of the catalogue and changes nothing.
+   *
+   * Where the member carries a non-null `standard`, some of its figures came
+   * out of a table rather than out of this listing — head dimensions for a
+   * screw, boundary dimensions for a bearing given only by designation. That
+   * is the one place this file's "nothing is inferred" rule is relaxed, and
+   * only because for a standard part those figures *are* the part.
+   * `SpecDrawing` prints the standard beside them so a reader can tell which
+   * half is whose. A `standard` of `null` means every figure is the listing's.
+   */
+  part: DrawnPart | null;
   /** True when there is nothing to draw and the caller should keep the plate. */
   empty: boolean;
 };
@@ -96,9 +133,36 @@ const DIMENSION_KEYS = new Set(["length_mm", "body_length_mm", "outer_od_mm", "d
 /** Noise on a drawing: merchandising, not specification. */
 const NOT_A_SPEC = new Set(["colour", "color", "brand", "series", "pack", "pack_qty"]);
 
-export function specDrawing(attrs: Record<string, unknown>): SpecDrawingModel {
-  const length = num(attrs, "length_mm") ?? num(attrs, "body_length_mm");
-  const across = num(attrs, "outer_od_mm") ?? num(attrs, "dia_mm");
+/**
+ * @param title        the listing title, when the caller has it. Read only by
+ *                     `fastener()`, which refuses anything ambiguous.
+ * @param categoryPath the dotted materialised path, used to *contradict* the
+ *                     title rather than to supply anything.
+ */
+export function specDrawing(
+  attrs: Record<string, unknown>,
+  title?: string,
+  categoryPath?: string,
+): SpecDrawingModel {
+  /*
+    One recogniser per family, first match wins. They are mutually exclusive in
+    practice — each vetoes on the category path — so the order is only a
+    tie-break for a row filed nowhere, and `fastener()` is the strictest.
+  */
+  const part: DrawnPart | null = title
+    ? (fastener(title, categoryPath) ?? bearing(title, categoryPath) ?? magnet(title, categoryPath))
+    : null;
+  const bolt = part?.kind === "fastener" ? part : null;
+  const round = part?.kind === "round" ? part : null;
+
+  /*
+    A recognised fastener states its own length and thread better than the
+    attribute row does — `thread` is populated on 4.9% of fastener rows and the
+    title carries it on 69.6%. The attribute row still wins where it exists,
+    because it is this SKU's own data and the title is a reading of it.
+  */
+  const length = num(attrs, "length_mm") ?? num(attrs, "body_length_mm") ?? bolt?.length ?? round?.width;
+  const across = num(attrs, "outer_od_mm") ?? num(attrs, "dia_mm") ?? bolt?.threadDia ?? round?.od;
 
   const rows = Object.entries(attrs)
     .filter(([k, v]) => {
@@ -117,9 +181,10 @@ export function specDrawing(attrs: Record<string, unknown>): SpecDrawingModel {
     across: across !== undefined ? `⌀${figure(across)}` : null,
     unit: "mm",
     rows,
+    part,
     // A sheet with no dimension and no spec row says nothing the plate did not
     // already say, so the caller keeps the plate rather than showing an empty
     // frame that looks like a failed load.
-    empty: length === undefined && across === undefined && rows.length === 0,
+    empty: part === null && length === undefined && across === undefined && rows.length === 0,
   };
 }

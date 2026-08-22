@@ -25,13 +25,23 @@ const SLOTS = [
 ] as const;
 
 export function Gallery({
-  glyph, sku, attrs, images = [],
+  glyph, sku, attrs, images = [], title, categoryPath,
 }: {
   glyph: GlyphKey;
   sku: string;
   attrs: Record<string, unknown>;
   /** Uploaded photographs, matched to the slots by role. */
   images?: { role: string; url: string; alt: string }[];
+  /**
+   * The listing title and primary category, for the drawing slot only.
+   *
+   * `specDrawing` hands them to `fastenerStd.ts`, which recognises a standard
+   * screw and refuses everything else. They are threaded down here rather than
+   * derived from `attrs` because the attribute row does not carry the thread —
+   * it is populated on 4.9% of fastener rows, against 69.6% of titles.
+   */
+  title?: string;
+  categoryPath?: string;
 }) {
   const [active, setActive] = useState(0);
   const part = { sku, attrs };
@@ -56,7 +66,7 @@ export function Gallery({
     `specDrawing` reports empty and the plate stays, rather than printing a
     frame with nothing in it.
   */
-  const generated = !specDrawing(attrs).empty;
+  const generated = !specDrawing(attrs, title, categoryPath).empty;
   const isGenerated = (role: string) => role === "drawing" && !shot("drawing") && generated;
 
   /*
@@ -77,7 +87,7 @@ export function Gallery({
       <div className="group relative overflow-hidden border border-ink-900 bg-surface">
         {isGenerated(slots[active].role) ? (
           <div className="relative aspect-square">
-            <SpecDrawing sku={sku} attrs={attrs} />
+            <SpecDrawing sku={sku} attrs={attrs} title={title} categoryPath={categoryPath} />
           </div>
         ) : (
           <Frame
@@ -113,7 +123,7 @@ export function Gallery({
           >
             {isGenerated(s.role) ? (
               <div className="relative aspect-square">
-                <SpecDrawing sku={sku} attrs={attrs} />
+                <SpecDrawing sku={sku} attrs={attrs} title={title} categoryPath={categoryPath} />
               </div>
             ) : (
               <Frame ratio="1/1" glyph={glyph} part={part} cell={4} tone="neutral" sizes="120px"
