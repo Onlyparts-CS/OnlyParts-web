@@ -60,6 +60,39 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
 
   /*
+    Two sharps are installed, and file tracing pairs the wrong halves.
+
+    `package.json` asks for sharp ^0.35.3 and Next ships its own 0.34.5 nested
+    under `node_modules/next`. Each needs a different libvips: 8.18.3 and 8.17.3
+    respectively, in separate `@img/sharp-libvips-*` packages found by the OS
+    loader rather than by any import the tracer can follow.
+
+    Tracing emitted our binding next to Next's library —
+
+      node_modules/@img/sharp-linux-x64/lib/sharp-linux-x64-0.35.3.node
+      node_modules/next/node_modules/@img/.../libvips-cpp.so.8.17.3
+
+    — and left our own 8.18.3 out entirely. So every route that initialises
+    Payload returned 500 with
+
+      ERR_DLOPEN_FAILED: libvips-cpp.so.8.18.3: cannot open shared object file
+
+    since `payload.config.ts` imports sharp for upload resizing. Verified by
+    building both ways and reading the `.nft.json` traces.
+
+    This is the escape hatch the tracing docs name for exactly this case. The
+    globs are inert where those packages are not installed, and both halves are
+    listed because they are one unit. Revisit if the two sharps are ever
+    deduplicated to a single version — then this can go.
+  */
+  outputFileTracingIncludes: {
+    "/*": [
+      "./node_modules/@img/sharp-linux-x64/**/*",
+      "./node_modules/@img/sharp-libvips-linux-x64/**/*",
+    ],
+  },
+
+  /*
     Security headers.
 
     There were none. Cloudflare can bolt most of these on with a Transform
