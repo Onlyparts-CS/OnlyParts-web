@@ -13,6 +13,17 @@ export const VARIANT_AXES: Record<string, string[]> = {
   "button-head":     ["thread", "length_mm", "material"],
   "countersunk-csk": ["thread", "length_mm", "material"],
   "pan-head":        ["thread", "length_mm", "material"],
+  /*
+    Filed by drive rather than by head, and left out of this map when it was
+    written — so `buildMatrix` returned no axes and the picker rendered as an
+    empty ruled band. The taxonomy splits screws two ways (`screws-by-head.*`
+    and `screws-by-drive.*`) and only the first branch was covered; 28 products
+    across these four leaves had size chips they could not show.
+  */
+  "flat-slotted":    ["thread", "length_mm", "material"],
+  "cross-phillips":  ["thread", "length_mm", "material"],
+  "cheese-head":     ["thread", "length_mm", "material"],
+  "hex-allen":       ["thread", "length_mm", "material"],
   "deep-groove":     ["bearing_code", "seal_type", "material"],
   disc:              ["grade", "dia_mm", "thickness_mm"],
   "nema-17":         ["body_length_mm", "shaft_dia_mm"],
@@ -149,15 +160,31 @@ export function buildMatrix(current: Sku, pool: Sku[]): { axes: Axis[]; family: 
   );
   if (!keys) return { axes: [], family };
 
-  const axes: Axis[] = keys.map((key) => {
-    const values = [...new Set(family.map((s) => String(s.attrs[key])))];
+  /*
+    An axis only exists if we hold the attribute for the part being looked at.
+
+    2,263 of 9,972 imported variants carry any structured attribute at all, so
+    for most of the catalogue `attrs[key]` is `undefined`. `String(undefined)`
+    is the string "undefined", which used to become a legitimate axis value:
+    the picker rendered "THREAD undefined" over a selected chip reading
+    `undefined`, and offered links to the handful of siblings that did have the
+    attribute as if they were the same part in another size. A picker that
+    cannot say what you are currently holding has nothing to pick from.
+  */
+  const axisKeys = keys.filter((key) => current.attrs[key] !== undefined);
+  if (!axisKeys.length) return { axes: [], family };
+
+  const axes: Axis[] = axisKeys.map((key) => {
+    const values = [...new Set(
+      family.filter((s) => s.attrs[key] !== undefined).map((s) => String(s.attrs[key])),
+    )];
     values.sort(byEngineeringOrder(key));
 
     const options: AxisOption[] = values.map((value) => {
       // hold the other axes fixed, vary this one — that's what the buyer means
       const target = family.find((s) =>
         String(s.attrs[key]) === value &&
-        keys.every((k) => k === key || String(s.attrs[k]) === String(current.attrs[k]))
+        axisKeys.every((k) => k === key || String(s.attrs[k]) === String(current.attrs[k]))
       );
       if (target) {
         return { value, label: fmtAxis(key, value), available: true, slug: target.slug };

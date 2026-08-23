@@ -5,6 +5,7 @@ import { SearchProvider } from "@/components/search/SearchProvider";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { DemoBanner } from "@/components/DemoBanner";
+import { PageViewBeacon } from "@/components/PageViewBeacon";
 
 /*
   One grotesque, used at every width and size the page needs — the
@@ -106,6 +107,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <main className="flex-1">{children}</main>
           <Footer />
         </SearchProvider>
+        <PageViewBeacon />
         <div hidden dangerouslySetInnerHTML={{ __html: CONTRACT }} />
       </body>
     </html>

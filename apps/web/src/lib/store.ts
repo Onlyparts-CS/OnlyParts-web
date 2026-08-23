@@ -10,12 +10,14 @@ import type { Rfq } from "./mod";
  * server-side and written to Postgres — a total decided by the buyer's own
  * browser was the entire attack, and localStorage could not hold a legal
  * document anyway. What is left is intent and convenience: the cart, the
- * wishlist, the address book, and a prototype session.
+ * wishlist, and the address book.
  *
  * Read as an external store (not React state) so components stay SSR-safe and
  * no effect ever has to sync state in — the pattern the React compiler flags.
  *
- * Still prototype: sign-in is not authentication, and reviews are local.
+ * No session lives here. Sign-in is a signed httpOnly cookie issued by the
+ * Google callback and read server-side — see `customerSession.ts`. Reviews are
+ * still local.
  */
 
 /** The localStorage bucket everything below lives in. Not a credential — the

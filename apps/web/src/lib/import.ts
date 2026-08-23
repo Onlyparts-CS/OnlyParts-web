@@ -144,16 +144,67 @@ export const IMAGE_HOSTS = ["cdn.shopify.com", "robu-prod-media.s3.ap-south-1.am
  * Filenames that are on a product page but are not a photograph of the product.
  *
  * A crawler takes the largest image it finds, which on a Shopify theme is
- * sometimes the theme's own furniture. Two products in the current sheet were
- * carrying `LeagueSpartan_30.png` — a type specimen for the shop's heading
- * font — as their catalogue photograph. Nothing downstream can tell that from
- * a screw, because it is a valid PNG on an allowed host.
+ * sometimes the theme's own furniture. Nothing downstream can tell that from a
+ * screw, because it is a valid PNG on an allowed host.
+ *
+ * `LeagueSpartan_30.png` is here for a different reason than it first looked.
+ * It is not a type specimen for the shop's heading font — it is a photograph
+ * of an M3 screw with the supplier's wordmark and a burned-in "x 25pcs"
+ * overlay, exported from a design tool that named the file after its type
+ * layer. Six products carry it. It is blocked because of what is drawn on it,
+ * which `tools/feeds/watermark.mjs` now finds by looking at the pixels rather
+ * than at the name.
+ *
+ * The name rule stays anyway, and not for free. Scoring all 2,554 onlyscrews
+ * images found fourteen named `LeagueSpartan_*`: ten carry the wordmark and
+ * four — a contents table, a washer, two cheese-head screws — are clean
+ * product renders this rule throws away. That is the price of still catching
+ * the other ten on a sheet nobody ran the probe over, which is every sheet
+ * uploaded by hand. Four images against a competitor's logo on the storefront
+ * is a trade worth making; it is not a trade worth forgetting we made.
+ *
+ * The word list is anchored to the **start of the basename**, and that is the
+ * whole design. Unanchored, it matched the word anywhere in the name and every
+ * hit outside `leaguespartan` was wrong: `sprite` threw away all five photos of
+ * Creality's Sprite Direct Drive extruder — a 100% false-positive rate across
+ * 177,646 harvested images — and `logo` threw away the Pi Zero W and three
+ * shots of an RPi heat-sink set. A real theme asset is named `logo.png` or
+ * `placeholder_600x.png`; a product whose *description* contains the word
+ * never has it first. This is the failure the paragraph below warned about,
+ * arriving through the door it was watching.
  *
  * Deliberately narrow. Matching on "badge" or "panel" would throw away the
  * name-badge magnets and solar panels this catalogue actually sells, so this
  * only names things that cannot be a product here.
  */
-const NOT_A_PRODUCT = /leaguespartan|(^|[-_/])(logo|favicon|placeholder|sprite)[-_.]|\.svg$/i;
+const NOT_A_PRODUCT = /leaguespartan|\/(logo|favicon|placeholder|sprite)[-_.]|\.svg$/i;
+
+/**
+ * Suppliers whose imagery is refused outright, by Shopify store id.
+ *
+ * `ALLOW_HOTLINKED_IMAGES` gates *display* for everything, on the reasoning
+ * that a grant might arrive and the flag is cheaper to flip than a re-crawl of
+ * 119,864 rows. That reasoning does not survive contact with a supplier we have
+ * decided we will never hold a grant from: onlyscrews.in is a direct
+ * competitor, the answer is settled, and storing 470 of their URLs against a
+ * permission that is not coming is not caution, it is clutter with a licence
+ * risk attached.
+ *
+ * Keyed on the store id rather than the host because three of our sources sit
+ * behind the same `cdn.shopify.com`, and the id is a clean discriminator —
+ * measured across every hotlink in the database, `1/0871/5295/1609` returns
+ * onlyscrews and only onlyscrews (470 rows), against `1/0300/6424/6919` for
+ * quartzcomponents (365) and `1/0559/1970/6265` for robocraze (273). Blocking
+ * the host would take all three.
+ *
+ * This is the *durable* half of the removal. Nulling the column alone would be
+ * undone by the next `pull.mjs --source=onlyscrews` followed by an import,
+ * silently, because nothing else in the pipeline knows the difference.
+ *
+ * quartzcomponents and robocraze are deliberately absent: they are competitors
+ * too, and nobody has ruled on them yet. Add them here when someone does.
+ */
+export const BLOCKED_IMAGE_PATHS = ["/s/files/1/0871/5295/1609/"];
 
 export function imageUrl(raw: string | undefined): string {
   const v = (raw ?? "").trim();
@@ -161,6 +212,7 @@ export function imageUrl(raw: string | undefined): string {
   try {
     const u = new URL(v);
     if (u.protocol !== "https:" || !IMAGE_HOSTS.includes(u.host)) return "";
+    if (BLOCKED_IMAGE_PATHS.some((p) => u.pathname.startsWith(p))) return "";
     return NOT_A_PRODUCT.test(u.pathname) ? "" : v;
   } catch {
     return "";

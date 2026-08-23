@@ -146,7 +146,7 @@ export const POLICIES: Policy[] = [
         body: [
           "To fulfil an order: your name, delivery address and phone number. We cannot ship without these.",
           "To invoice you: your email, and your GSTIN if you provide one.",
-          "To improve the site: anonymised usage analytics, which you can decline without losing any functionality.",
+          "To improve the site: a count of how often each page is viewed. That count is the whole of it — no cookie, no visitor identifier, no session, no IP address, no third-party analytics service. There is nothing in it to connect a page to a person, which is why there is nothing here for you to decline and no consent banner asking you to.",
           "We do not collect date of birth, gender or demographic information, because we have no use for it. Data we do not hold cannot be leaked.",
         ],
       },
@@ -161,7 +161,7 @@ export const POLICIES: Policy[] = [
         body: [
           "You can export everything we hold about you, correct it, or have it erased, from your account. Exports are delivered within 7 days; erasure completes within 30.",
           "One limit worth stating plainly: tax law requires us to retain order and invoice records for 8 years. When you request erasure we anonymise those records — your personal identifiers are removed while the financial figures remain for audit. The invoice stays valid; you are no longer identifiable from it.",
-          "Consent for marketing, analytics and WhatsApp messaging is separate and separately revocable. Withdrawing one does not affect the others or your ability to order.",
+          "Consent for marketing and WhatsApp messaging is separate and separately revocable. Withdrawing one does not affect the other or your ability to order. Analytics is absent from that list on purpose: it collects nothing about you, so there is no consent to withdraw.",
         ],
       },
       {

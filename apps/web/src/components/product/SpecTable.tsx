@@ -96,10 +96,6 @@ export function SpecTable({ sku }: { sku: Sku }) {
           <button onClick={copy} className="btn btn-secondary btn-sm">
             {copied ? <><CheckIcon className="size-3.5" /> Copied</> : "Copy specs"}
           </button>
-          {sku.hasDatasheet && (
-            <button className="btn btn-secondary btn-sm">Drawing (PDF)</button>
-          )}
-          <button className="btn btn-secondary btn-sm">STEP file</button>
         </div>
       </div>
 

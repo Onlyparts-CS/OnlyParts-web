@@ -1,4 +1,5 @@
 import "server-only";
+import { fastener } from "./fastenerStd";
 import { cache } from "react";
 import { getPayload } from "payload";
 import config from "@payload-config";
@@ -6,6 +7,28 @@ import type { Sku, PriceBreak } from "./skus";
 import type { GlyphKey } from "./types";
 import { CATEGORIES } from "./catalog";
 import { imageUrl } from "./import";
+
+/**
+ * Whether a supplier's photograph may be shown, as opposed to merely stored.
+ *
+ * 3,800 of 3,807 imported rows carry an image URL, and none of them is ours.
+ * 1,108 are `cdn.shopify.com` — a competitor's own storefront photography,
+ * their logo and an "x 25pcs" overlay burned into the frame, which also
+ * misstates the pack size we sell. The remaining 2,692 are a distributor's S3
+ * and are only usable with a written grant we do not hold. `Media.licence`
+ * offers `owned | supplier | pd | cc0` and there is no value that fits either
+ * set: the schema was telling us this before anyone asked.
+ *
+ * So this gates *display*, not storage. The importer keeps writing
+ * `sourceImageUrl` and the column keeps its data, because the day a grant
+ * arrives the flag is what changes, not a re-crawl of 119,864 rows.
+ *
+ * **Absent means off.** A deployment that forgets this variable ships plates
+ * and generated drawings, which is legal and looks deliberate. The opposite
+ * default ships infringement on a missing env var, and the failure is silent —
+ * the pages look *better* when it goes wrong, so nobody reports it.
+ */
+const HOTLINKS_ALLOWED = process.env.ALLOW_HOTLINKED_IMAGES === "true";
 
 /**
  * The catalogue, read from Postgres.
@@ -240,6 +263,28 @@ function toSku(v: VariantRow, ctx: Ctx): Sku | null {
     else if (a.valueText) attrs[key] = a.valueText;
   }
 
+  /*
+    Thread, recovered from the title when the row does not carry it.
+
+    `thread` is the first axis of every screw picker in `VARIANT_AXES`, and it
+    is populated on 4.9% of fastener rows because Indian Shopify listings do not
+    publish a "Thread Size" spec row — while 69.6% state it in the title. The
+    effect on the page is not a missing spec line, it is a missing *control*:
+    `buildMatrix` drops an axis whose value it cannot read for the part in hand,
+    so a screw with no `thread` offers length and material and no way to change
+    size, on a shelf where size is the thing buyers change.
+
+    Filled only when absent, and only from `fastener()`, which refuses every
+    ambiguous title. This is the listing's own words about its own part — not
+    a figure from a standard — so it needs no provenance mark the way the
+    drawing's head dimensions do.
+  */
+  const bolt = fastener([product.title, v.titleSuffix].filter(Boolean).join(" "), primaryPath);
+  if (bolt) {
+    if (attrs.thread === undefined) attrs.thread = bolt.thread;
+    if (attrs.length_mm === undefined) attrs.length_mm = bolt.length;
+  }
+
   // qty 1 is the base price; the collection stores only genuine breaks above it.
   const breaks: PriceBreak[] = [
     { qty: 1, price: v.basePrice },
@@ -252,9 +297,9 @@ function toSku(v: VariantRow, ctx: Ctx): Sku | null {
   // the gallery, and the PDP maps role onto its four named slots.
   const shots = ctx.mediaByProduct.get(String(product.id)) ?? [];
   const hero = shots.find((m) => m.role === "hero") ?? shots[0];
-  const sourceImage = imageUrl(
-    typeof product.sourceImageUrl === "string" ? product.sourceImageUrl : undefined,
-  );
+  const sourceImage = HOTLINKS_ALLOWED
+    ? imageUrl(typeof product.sourceImageUrl === "string" ? product.sourceImageUrl : undefined)
+    : "";
 
   return {
     sku: v.sku,
@@ -322,7 +367,6 @@ function toSku(v: VariantRow, ctx: Ctx): Sku | null {
     */
     rating: 0,
     ratingCount: 0,
-    hasDatasheet: Boolean(product.datasheet),
   };
 }
 

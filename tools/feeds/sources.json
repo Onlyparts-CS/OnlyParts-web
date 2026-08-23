@@ -48,6 +48,31 @@
     "note": "Displays, sensors, boards."
   },
 
+  "makerbazar": {
+    "kind": "shopify",
+    "host": "makerbazar.in",
+    "prefix": "MB",
+    "note": "3D printing, electronics, maker tools. Found by probing /products.json; 2,000+ products."
+  },
+  "kitsguru": {
+    "kind": "shopify",
+    "host": "kitsguru.com",
+    "prefix": "KG",
+    "note": "Components, kits, modules. 2,000+ products."
+  },
+  "tanotis": {
+    "kind": "shopify",
+    "host": "tanotis.com",
+    "prefix": "TN",
+    "note": "Sensors, boards, robotics. 2,000+ products."
+  },
+  "silverline": {
+    "kind": "shopify",
+    "host": "silverlineelectronics.in",
+    "prefix": "SL",
+    "note": "Small catalogue, ~250 products. Kept for coverage of parts the larger stores skip."
+  },
+
   "robu": {
     "kind": "robu",
     "host": "robu.in",
