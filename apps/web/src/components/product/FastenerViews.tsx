@@ -93,8 +93,11 @@ export function FastenerViews({
   f,
   top,
   bottom,
+  tone,
 }: {
   f: Fastener;
+  /** Body fill from the stated finish, or null when none was stated. */
+  tone?: string | null;
   /** Top of the band the drawing may use. */
   top: number;
   /** Bottom of that band. */
@@ -157,16 +160,16 @@ export function FastenerViews({
       </g>
 
       {/* ---------- end view ---------- */}
-      <circle cx={CX} cy={tvCy} r={r} fill="none" stroke={ink} strokeWidth={1.1} />
+      <circle cx={CX} cy={tvCy} r={r} fill={tone ?? "none"} stroke={ink} strokeWidth={1.1} />
       <path d={drivePath(f, CX, tvCy, r)} fill="var(--color-ink-200)" stroke={ink} strokeWidth={0.7} />
 
       {/* ---------- side elevation ---------- */}
-      <path d={headPath(f, x0, hh, hd, td, cy)} fill="none" stroke={ink} strokeWidth={1.25} />
+      <path d={headPath(f, x0, hh, hd, td, cy)} fill={tone ?? "none"} stroke={ink} strokeWidth={1.25} />
 
       {/* shank at major diameter, with the minor-diameter pair that denotes a thread */}
       <path
         d={`M ${xs0} ${cy - td / 2} H ${xs1 - td * 0.22} L ${xs1} ${cy - td * 0.3} L ${xs1} ${cy + td * 0.3} L ${xs1 - td * 0.22} ${cy + td / 2} H ${xs0} Z`}
-        fill="none"
+        fill={tone ?? "none"}
         stroke={ink}
         strokeWidth={1.25}
       />

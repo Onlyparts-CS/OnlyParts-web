@@ -91,7 +91,15 @@ function DimV({
 const CX = 160;
 const fig = (n: number) => (Number.isInteger(n) ? String(n) : String(Number(n.toFixed(3))));
 
-export function ChipViews({ p, top, bottom }: { p: ChipPart; top: number; bottom: number }) {
+export function ChipViews({
+  p, top, bottom, tone,
+}: {
+  p: ChipPart;
+  top: number;
+  bottom: number;
+  /** Body fill from the stated finish, or null when none was stated. */
+  tone?: string | null;
+}) {
   const ink = "var(--color-ink-900)";
   const hair = "var(--color-ink-400)";
   const dim = "var(--color-spot-700)";
@@ -138,14 +146,14 @@ export function ChipViews({ p, top, bottom }: { p: ChipPart; top: number; bottom
       </g>
 
       {/* plan: body, with a termination at each end */}
-      <rect x={x0} y={planCy - w / 2} width={l} height={w} fill="none" stroke={ink} strokeWidth={1.25} />
+      <rect x={x0} y={planCy - w / 2} width={l} height={w} fill={tone ?? "none"} stroke={ink} strokeWidth={1.25} />
       <g fill={hair} stroke={ink} strokeWidth={0.9} opacity={0.55}>
         <rect x={x0} y={planCy - w / 2} width={band} height={w} />
         <rect x={x1 - band} y={planCy - w / 2} width={band} height={w} />
       </g>
 
       {/* elevation, same length, terminations wrapping the ends */}
-      <rect x={x0} y={elevCy - th / 2} width={l} height={th} fill="none" stroke={ink} strokeWidth={1.25} />
+      <rect x={x0} y={elevCy - th / 2} width={l} height={th} fill={tone ?? "none"} stroke={ink} strokeWidth={1.25} />
       <g fill={hair} stroke={ink} strokeWidth={0.9} opacity={0.55}>
         <rect x={x0} y={elevCy - th / 2} width={band} height={th} />
         <rect x={x1 - band} y={elevCy - th / 2} width={band} height={th} />
