@@ -45,10 +45,17 @@ const MASKS = [
   [/\b\d+(?:\.\d+)?(?:\s*[x×X]\s*\d+(?:\.\d+)?){1,3}\b/g, " ⟨size⟩ "],
   // Tolerance and percentage
   [/[±+-]?\s*\d+(?:\.\d+)?\s*%/g, " ⟨tol⟩ "],
-  // Bare 3-5 digit codes: EIA package sizes, bearing designations, resistance codes
-  [/(?<![\w.])\d{3,5}(?![\w.])/g, " ⟨code⟩ "],
-  // Anything left that is a bare number
-  [/(?<![\w.])\d+(?:\.\d+)?(?![\w.])/g, " ⟨n⟩ "],
+  /*
+    One token for every bare number, not two.
+
+    Splitting 3-5 digit codes from other numbers put the same carbon-film
+    resistor in two families: "…RS890 — 5" masked to ⟨n⟩ and "…RS890 — 100" to
+    ⟨code⟩, so a pack-quantity variant looked like a different product and both
+    families carried the same 592 images. The distinction never survived
+    masking — nothing downstream can tell an EIA size code from a pack count
+    once both are asterisks — so it only ever split families.
+  */
+  [/(?<![\w.])\d+(?:\.\d+)?(?![\w.])/g, " ⟨num⟩ "],
 ];
 
 /*
@@ -73,12 +80,57 @@ const familyKey = (title) => {
   let t = ` ${title} `;
   if (PASSIVE.test(t) && !NOT_PASSIVE.test(t)) t = t.replace(MPN, " ⟨mpn⟩ ");
   for (const [re, to] of MASKS) t = t.replace(re, to);
-  return t
+  t = t
     .replace(/[–—\-_/,:;()\[\]|]+/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
+  // Corpus-rare alphanumeric tokens are identifiers; see the note above pass 1.
+  return t
+    .split(" ")
+    .map((tok) => (tok.startsWith("⟨") ? tok : isRare(tok) ? "⟨rare⟩" : tok))
+    .join(" ");
 };
+
+/* ---- pass 1: token frequency ---- */
+/*
+  Hand-written masks kept missing codes, and each miss split a family in two.
+  The corpus can say which tokens are identifiers without being told: a token
+  that occurs in exactly one title out of 168,717 is not describing anything, it
+  is naming that one row. So document frequency does the work the regexes were
+  guessing at — 2J223J and 2A473J disappear for the same reason WR06X6802FTL
+  does, without anyone having to notice their shape first.
+
+  df >= 2 survives, because a token shared by even two listings is doing some
+  describing. That is a deliberately low bar: over-masking here would merge
+  genuinely distinct products, and this pass runs after the targeted masks
+  precisely so the common cases are already handled by rules that can be read.
+*/
+const RARE_DF = Number(flagRare()) || 1;
+function flagRare() {
+  const a = process.argv.find((x) => x.startsWith("--rare-df="));
+  return a ? a.split("=")[1] : null;
+}
+
+const titlesAll = [];
+const seenPre = new Set();
+for (const f of feeds) {
+  const d = JSON.parse(readFileSync(path.join(DIR, f), "utf8"));
+  for (const r of Array.isArray(d) ? d : (d.rows ?? d.products ?? [])) {
+    const t = (r.title ?? "").trim();
+    if (!t) continue;
+    const k = t.toLowerCase();
+    if (seenPre.has(k)) continue;
+    seenPre.add(k);
+    titlesAll.push(t);
+  }
+}
+const df = new Map();
+const tokenize = (t) => (t.toLowerCase().match(/[a-z0-9][a-z0-9.\-]*/g) ?? []);
+for (const t of titlesAll) {
+  for (const tok of new Set(tokenize(t))) df.set(tok, (df.get(tok) ?? 0) + 1);
+}
+const isRare = (tok) => (df.get(tok) ?? 0) <= RARE_DF && /\d/.test(tok) && tok.length >= 4;
 
 /* ---- gather ---- */
 const fam = new Map();
@@ -116,6 +168,15 @@ const list = [...fam.entries()]
 const multi = list.filter((f) => f.skus > 1);
 const totalInMulti = multi.reduce((a, f) => a + f.skus, 0);
 const urlsInMulti = multi.reduce((a, f) => a + f.urls, 0);
+
+/* `--dump-urls` feeds family-review.mjs, which needs every url, not the first. */
+if (process.argv.includes("--dump-urls")) {
+  for (const f of list) {
+    const e = fam.get(f.key);
+    process.stdout.write(JSON.stringify({ key: f.key, urls: [...e.urls], titles: e.titles }) + "\n");
+  }
+  process.exit(0);
+}
 
 const esc = (s) => `"${String(s).replace(/"/g, '""')}"`;
 console.log(["skus", "distinct_image_urls", "sources", "family", "example_title", "candidate_url"].join(","));
