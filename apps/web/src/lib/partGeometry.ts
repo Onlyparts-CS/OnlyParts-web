@@ -220,7 +220,7 @@ export function magnet(title: string, categoryPath?: string): RoundPart | BlockP
       silently dropped all 34 bare-triple rows.
     */
     const bare = t.match(
-      /(\d+(?:\.\d+)?)\s*(?:mm)?\s*[×xX]\s*(\d+(?:\.\d+)?)\s*(?:mm)?\s*[×xX]\s*(\d+(?:\.\d+)?)\s*mm/i,
+      /(?<![\w.])(\d+(?:\.\d+)?)\s*(?:mm)?\s*[×xX]\s*(\d+(?:\.\d+)?)\s*(?:mm)?\s*[×xX]\s*(\d+(?:\.\d+)?)\s*mm/i,
     );
     const m = spelled ?? bare;
     if (!m) return null;
@@ -231,7 +231,7 @@ export function magnet(title: string, categoryPath?: string): RoundPart | BlockP
 
   // ---- ring: outside diameter, bore, thickness
   if (isRing) {
-    const m = t.match(/(\d+(?:\.\d+)?)\s*[×xX]\s*(\d+(?:\.\d+)?)\s*[×xX]\s*(\d+(?:\.\d+)?)\s*mm/i);
+    const m = t.match(/(?<![\w.])(\d+(?:\.\d+)?)\s*[×xX]\s*(\d+(?:\.\d+)?)\s*[×xX]\s*(\d+(?:\.\d+)?)\s*mm/i);
     if (!m) return null;
     const [od, id, h] = [n(m[1]), n(m[2]), n(m[3])];
     if (!ok(od, id, h) || id >= od) return null;
@@ -245,13 +245,19 @@ export function magnet(title: string, categoryPath?: string): RoundPart | BlockP
       "6mm Diameter Neodymium Disc Magnets N35 — 10mm"
       "Neodymium (NdFeB) 20x6 mm Disc Magnet"
 
+    Every leading figure carries `(?<![\w.])`. Without it the first capture
+    matched *inside* an alphanumeric token: "N35 × 10mm × 1mm" read the grade
+    N35 as a 35 mm diameter and the diameter as the thickness, so a ⌀10×1 disc
+    and a ⌀10×10 disc drew the identical ⌀35×10 sheet. It also stops `7.5`
+    being entered at the `5`.
+
     All three are diameter first, thickness second. The spelled-out form is
     tried first because it is unambiguous; the em-dash form second because it
     is the only one where the two figures are separated by prose.
   */
   const spelled = t.match(/Dia(?:meter)?\s*:?\s*(\d+(?:\.\d+)?)\s*mm\s*,\s*Thick(?:ness)?\s*:?\s*(\d+(?:\.\d+)?)\s*mm/i);
-  const dashed = t.match(/(\d+(?:\.\d+)?)\s*mm\s+Diameter\b[^—–-]*[—–-]\s*(\d+(?:\.\d+)?)\s*mm/i);
-  const bare = t.match(/(\d+(?:\.\d+)?)\s*(?:mm)?\s*[×xX]\s*(\d+(?:\.\d+)?)\s*mm/i);
+  const dashed = t.match(/(?<![\w.])(\d+(?:\.\d+)?)\s*mm\s+Diameter\b[^—–-]*[—–-]\s*(\d+(?:\.\d+)?)\s*mm/i);
+  const bare = t.match(/(?<![\w.])(\d+(?:\.\d+)?)\s*(?:mm)?\s*[×xX]\s*(\d+(?:\.\d+)?)\s*mm/i);
 
   const m = spelled ?? dashed ?? bare;
   if (!m) return null;

@@ -1,6 +1,7 @@
 import { specDrawing } from "@/lib/specDrawing";
 import { FastenerViews } from "./FastenerViews";
 import { PartViews } from "./PartViews";
+import { ChipViews } from "./ChipViews";
 
 /**
  * The `drawing` slot, actually drawn.
@@ -47,6 +48,7 @@ export function SpecDrawing({
 
   const part = model.part;
   const bolt = part?.kind === "fastener" ? part : null;
+  const chip = part?.kind === "chip" ? part : null;
   /*
     The footer follows provenance, not part type. A bearing given only as "608"
     took its figures from ISO 15 and must say so; the same bearing with its
@@ -102,7 +104,13 @@ export function SpecDrawing({
                   ? `${part.label}. Outside diameter ${part.od} ${model.unit}` +
                     (part.bore === null ? "" : `, bore ${part.bore} ${model.unit}`) +
                     `, width ${part.width} ${model.unit}.`
-                  : `${part.label}. ${part.length} by ${part.breadth} by ${part.thickness} ${model.unit}.`,
+                  : part.kind === "chip"
+                    ? `${part.code} chip, ${part.metric} metric. ` +
+                      `${part.length} by ${part.width} ${model.unit}` +
+                      (part.height === null
+                        ? ", height not fixed by the size code."
+                        : ` by ${part.height} ${model.unit} high.`)
+                    : `${part.label}. ${part.length} by ${part.breadth} by ${part.thickness} ${model.unit}.`,
               // Provenance belongs in the spoken version too — the footer says
               // it in print and a screen reader never reaches the footer.
               standard ? `Some dimensions per ${standard}.` : "Dimensions as listed.",
@@ -120,7 +128,10 @@ export function SpecDrawing({
       }
     >
       {bolt && <FastenerViews f={bolt} top={30} bottom={sepY - 10} />}
-      {part && part.kind !== "fastener" && <PartViews p={part} top={30} bottom={sepY - 10} />}
+      {chip && <ChipViews p={chip} top={30} bottom={sepY - 10} />}
+      {part && part.kind !== "fastener" && part.kind !== "chip" && (
+        <PartViews p={part} top={30} bottom={sepY - 10} />
+      )}
 
       {hasEnvelope && (
         <g>
@@ -235,12 +246,17 @@ export function SpecDrawing({
           <text x={26} y={footerTop} className="font-mono" fontSize={7.5} fill="var(--color-ink-500)">
             {bolt
               ? `HEAD ⌀+HEIGHT PER ${standard} · THREAD+LENGTH LISTED`
-              : `BOUNDARY DIMENSIONS PER ${standard}`}
+              : chip
+                ? `BODY ${chip.code} (${chip.metric} METRIC) PER ${standard}` +
+                  (chip.height === null ? " · HEIGHT NOT SET BY CODE" : "")
+                : `BOUNDARY DIMENSIONS PER ${standard}`}
           </text>
           <text x={26} y={FOOTER_Y} className="font-mono" fontSize={7.5} fill="var(--color-ink-400)">
             {bolt
               ? `${model.unit.toUpperCase()} · ENVELOPE TO PROPORTION · RECESS INDICATIVE`
-              : `${model.unit.toUpperCase()} · DRAWN TO PROPORTION`}
+              : chip
+                ? `${model.unit.toUpperCase()} · DRAWN TO PROPORTION · TERMINATIONS INDICATIVE`
+                : `${model.unit.toUpperCase()} · DRAWN TO PROPORTION`}
           </text>
         </>
       ) : (
