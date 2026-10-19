@@ -150,6 +150,28 @@ if (bareBlock.kind === "block") assert.deepEqual([bareBlock.length, bareBlock.br
 const padded = mustM("Neodymium Rectangular Magnet — 12x09x04mm / Pack of 10");
 if (padded.kind === "block") assert.deepEqual([padded.length, padded.breadth, padded.thickness], [12, 9, 4]);
 
+/*
+  A grade is not a dimension.
+
+  The seeded catalogue writes "N35 x 10mm x 1mm", grade first. With no left
+  boundary on the leading figure the pattern entered *inside* N35 and read a
+  35 mm disc 10 thick — so every size in the family drew one identical sheet,
+  wrongly, and the sheet is the thing a buyer measures from.
+*/
+const graded1 = mustM("Neodymium Disc Magnet (pack of 10) — N35 × 10mm × 1mm");
+assert.equal(graded1.kind, "round");
+if (graded1.kind === "round") assert.deepEqual([graded1.od, graded1.width, graded1.bore], [10, 1, null]);
+
+const graded10 = mustM("Neodymium Disc Magnet (pack of 10) — N35 × 10mm × 10mm");
+assert.equal(graded10.kind, "round");
+if (graded10.kind === "round") assert.deepEqual([graded10.od, graded10.width, graded10.bore], [10, 10, null]);
+
+// The two above must not collapse onto one another.
+assert.notDeepEqual(
+  [graded1.od, graded1.kind === "round" ? graded1.width : null],
+  [graded10.od, graded10.kind === "round" ? graded10.width : null],
+);
+
 /* ---- magnet refusals ---- */
 
 noM("Neodymium (NdFeB) SNJ 36 D-Hook Magnet- High-Strength Rare Earth Magnet", "a hook assembly, no geometry");

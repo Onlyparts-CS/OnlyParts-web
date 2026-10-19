@@ -29,6 +29,7 @@
  */
 import { fastener, type Fastener } from "./fastenerStd";
 import { bearing, magnet, type BlockPart, type RoundPart } from "./partGeometry";
+import { chipPackage, type ChipPart } from "./packageStd";
 
 /**
  * A part whose geometry we can actually draw.
@@ -37,7 +38,7 @@ import { bearing, magnet, type BlockPart, type RoundPart } from "./partGeometry"
  * which views to draw, and whose figures they are. `standard` on the round and
  * block members and the fastener's own `standard` answer the second one.
  */
-export type DrawnPart = Fastener | RoundPart | BlockPart;
+export type DrawnPart = Fastener | RoundPart | BlockPart | ChipPart;
 
 /** Suffix → unit. The importer's keys carry their unit in the name. */
 const UNITS: [RegExp, string][] = [
@@ -150,7 +151,10 @@ export function specDrawing(
     tie-break for a row filed nowhere, and `fastener()` is the strictest.
   */
   const part: DrawnPart | null = title
-    ? (fastener(title, categoryPath) ?? bearing(title, categoryPath) ?? magnet(title, categoryPath))
+    ? (fastener(title, categoryPath) ??
+       bearing(title, categoryPath) ??
+       magnet(title, categoryPath) ??
+       chipPackage(title, categoryPath))
     : null;
   const bolt = part?.kind === "fastener" ? part : null;
   const round = part?.kind === "round" ? part : null;
@@ -161,7 +165,8 @@ export function specDrawing(
     title carries it on 69.6%. The attribute row still wins where it exists,
     because it is this SKU's own data and the title is a reading of it.
   */
-  const length = num(attrs, "length_mm") ?? num(attrs, "body_length_mm") ?? bolt?.length ?? round?.width;
+  const chip = part?.kind === "chip" ? part : null;
+  const length = num(attrs, "length_mm") ?? num(attrs, "body_length_mm") ?? bolt?.length ?? round?.width ?? chip?.length;
   const across = num(attrs, "outer_od_mm") ?? num(attrs, "dia_mm") ?? bolt?.threadDia ?? round?.od;
 
   const rows = Object.entries(attrs)

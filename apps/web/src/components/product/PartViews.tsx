@@ -99,10 +99,13 @@ export function PartViews({
   p,
   top,
   bottom,
+  tone,
 }: {
   p: RoundPart | BlockPart;
   top: number;
   bottom: number;
+  /** Body fill from the stated finish, or null when none was stated. */
+  tone?: string | null;
 }) {
   const CX = 160;
   const ink = "var(--color-ink-700)";
@@ -142,13 +145,13 @@ export function PartViews({
         </g>
 
         {/* end view: outside circle, and the bore when there is one */}
-        <circle cx={CX} cy={tvCy} r={od / 2} fill="none" stroke={ink} strokeWidth={1.25} />
+        <circle cx={CX} cy={tvCy} r={od / 2} fill={tone ?? "none"} stroke={ink} strokeWidth={1.25} />
         {p.bore !== null && (
           <circle cx={CX} cy={tvCy} r={bore / 2} fill={surface} stroke={ink} strokeWidth={1.1} />
         )}
 
         {/* side elevation: the width, with the bore shown through it */}
-        <rect x={x0} y={cy - od / 2} width={w} height={od} fill="none" stroke={ink} strokeWidth={1.25} />
+        <rect x={x0} y={cy - od / 2} width={w} height={od} fill={tone ?? "none"} stroke={ink} strokeWidth={1.25} />
         {p.bore !== null && (
           <g stroke={ink} strokeWidth={0.8}>
             <line x1={x0} y1={cy - bore / 2} x2={x1} y2={cy - bore / 2} />
@@ -212,8 +215,8 @@ export function PartViews({
         <line x1={CX} y1={planCy - b / 2 - 8} x2={CX} y2={elevCy + th / 2 + 8} />
       </g>
 
-      <rect x={x0} y={planCy - b / 2} width={l} height={b} fill="none" stroke={ink} strokeWidth={1.25} />
-      <rect x={x0} y={elevCy - th / 2} width={l} height={th} fill="none" stroke={ink} strokeWidth={1.25} />
+      <rect x={x0} y={planCy - b / 2} width={l} height={b} fill={tone ?? "none"} stroke={ink} strokeWidth={1.25} />
+      <rect x={x0} y={elevCy - th / 2} width={l} height={th} fill={tone ?? "none"} stroke={ink} strokeWidth={1.25} />
 
       {/* the two views line up, so the projection lines are worth drawing */}
       <g stroke={hair} strokeWidth={0.45} strokeDasharray="2 2">

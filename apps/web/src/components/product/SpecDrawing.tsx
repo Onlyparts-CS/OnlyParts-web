@@ -1,6 +1,8 @@
 import { specDrawing } from "@/lib/specDrawing";
 import { FastenerViews } from "./FastenerViews";
 import { PartViews } from "./PartViews";
+import { ChipViews } from "./ChipViews";
+import { finishTone } from "@/lib/finishTone";
 
 /**
  * The `drawing` slot, actually drawn.
@@ -47,6 +49,12 @@ export function SpecDrawing({
 
   const part = model.part;
   const bolt = part?.kind === "fastener" ? part : null;
+  const chip = part?.kind === "chip" ? part : null;
+  /*
+    The tone is a restatement of a value already in the title block below, never
+    a new claim. Nothing recognised means no tone, and the sheet is unchanged.
+  */
+  const tone = finishTone(attrs as Record<string, unknown>);
   /*
     The footer follows provenance, not part type. A bearing given only as "608"
     took its figures from ISO 15 and must say so; the same bearing with its
@@ -76,7 +84,18 @@ export function SpecDrawing({
     6 units off the provenance line — close enough to read as one block, which
     is the specific confusion the provenance line exists to prevent.
   */
-  const footerTop = standard ? FOOTER_Y - 9 : FOOTER_Y;
+  /*
+    One line per authority, stacked upward from FOOTER_Y.
+
+    Budgeted at 53 characters each — the sheet is 320 units wide with 26 of
+    margin a side and this face runs ~5 units per character at 7.5. Appending
+    the tone to the caveat line instead of giving it its own put a bolt sheet at
+    84 and dropped "AS LISTED" off the right edge, which on a provenance line is
+    the worst possible thing to lose: the reader is left with a colour and no
+    statement of where it came from.
+  */
+  const provenanceLines = (standard ? 1 : 0) + (tone ? 1 : 0);
+  const footerTop = FOOTER_Y - provenanceLines * 9;
   const firstRow = footerTop - 20 - (rows.length - 1) * ROW_STEP;
   const skuY = firstRow - 22;
   const sepY = skuY - 16;
@@ -102,10 +121,17 @@ export function SpecDrawing({
                   ? `${part.label}. Outside diameter ${part.od} ${model.unit}` +
                     (part.bore === null ? "" : `, bore ${part.bore} ${model.unit}`) +
                     `, width ${part.width} ${model.unit}.`
-                  : `${part.label}. ${part.length} by ${part.breadth} by ${part.thickness} ${model.unit}.`,
+                  : part.kind === "chip"
+                    ? `${part.code} chip, ${part.metric} metric. ` +
+                      `${part.length} by ${part.width} ${model.unit}` +
+                      (part.height === null
+                        ? ", height not fixed by the size code."
+                        : ` by ${part.height} ${model.unit} high.`)
+                    : `${part.label}. ${part.length} by ${part.breadth} by ${part.thickness} ${model.unit}.`,
               // Provenance belongs in the spoken version too — the footer says
               // it in print and a screen reader never reaches the footer.
               standard ? `Some dimensions per ${standard}.` : "Dimensions as listed.",
+              tone ? `Shown in ${tone.label.toLowerCase()}, as listed.` : "",
               ...rows.map((r) => `${r.label.toLowerCase()}: ${r.value}.`),
             ].join(" ")
           : [
@@ -119,8 +145,11 @@ export function SpecDrawing({
               .join(" ") + " Not to scale.")
       }
     >
-      {bolt && <FastenerViews f={bolt} top={30} bottom={sepY - 10} />}
-      {part && part.kind !== "fastener" && <PartViews p={part} top={30} bottom={sepY - 10} />}
+      {bolt && <FastenerViews f={bolt} top={30} bottom={sepY - 10} tone={tone?.fill} />}
+      {chip && <ChipViews p={chip} top={30} bottom={sepY - 10} tone={tone?.fill} />}
+      {part && part.kind !== "fastener" && part.kind !== "chip" && (
+        <PartViews p={part} top={30} bottom={sepY - 10} tone={tone?.fill} />
+      )}
 
       {hasEnvelope && (
         <g>
@@ -235,20 +264,52 @@ export function SpecDrawing({
           <text x={26} y={footerTop} className="font-mono" fontSize={7.5} fill="var(--color-ink-500)">
             {bolt
               ? `HEAD ⌀+HEIGHT PER ${standard} · THREAD+LENGTH LISTED`
-              : `BOUNDARY DIMENSIONS PER ${standard}`}
+              : chip
+                ? `BODY ${chip.code} (${chip.metric} METRIC) PER ${standard}` +
+                  (chip.height === null ? " · HEIGHT NOT SET BY CODE" : "")
+                : `BOUNDARY DIMENSIONS PER ${standard}`}
           </text>
+          {/*
+            Without this the tone is decoration, and a reader would be right to
+            wonder whether the colour is itself a measurement.
+          */}
+          {tone && (
+            <text
+              x={26}
+              y={footerTop + (standard ? 9 : 0)}
+              className="font-mono"
+              fontSize={7.5}
+              fill="var(--color-ink-500)"
+            >
+              {`TONE = ${tone.label.toUpperCase()} AS LISTED`}
+            </text>
+          )}
           <text x={26} y={FOOTER_Y} className="font-mono" fontSize={7.5} fill="var(--color-ink-400)">
             {bolt
               ? `${model.unit.toUpperCase()} · ENVELOPE TO PROPORTION · RECESS INDICATIVE`
-              : `${model.unit.toUpperCase()} · DRAWN TO PROPORTION`}
+              : chip
+                ? `${model.unit.toUpperCase()} · DRAWN TO PROPORTION · TERMINATIONS INDICATIVE`
+                : `${model.unit.toUpperCase()} · DRAWN TO PROPORTION`}
           </text>
         </>
       ) : (
-        <text x={26} y={FOOTER_Y} className="font-mono" fontSize={8} fill="var(--color-ink-400)">
-          {part
-            ? `DRAWN TO PROPORTION · ${model.unit.toUpperCase()} · AS PUBLISHED`
-            : `NOT TO SCALE · DIMENSIONS IN ${model.unit.toUpperCase()} · AS PUBLISHED`}
-        </text>
+        /*
+          No standard, so no provenance line for the figures — but a tone still
+          has a source and still has to name it. A magnet whose size came off
+          its own listing can perfectly well state a coating.
+        */
+        <>
+          {tone && (
+            <text x={26} y={footerTop} className="font-mono" fontSize={7.5} fill="var(--color-ink-500)">
+              {`TONE = ${tone.label.toUpperCase()} AS LISTED`}
+            </text>
+          )}
+          <text x={26} y={FOOTER_Y} className="font-mono" fontSize={8} fill="var(--color-ink-400)">
+            {part
+              ? `DRAWN TO PROPORTION · ${model.unit.toUpperCase()} · AS PUBLISHED`
+              : `NOT TO SCALE · DIMENSIONS IN ${model.unit.toUpperCase()} · AS PUBLISHED`}
+          </text>
+        </>
       )}
     </svg>
   );
